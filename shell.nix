@@ -4,8 +4,11 @@
 }:
   with pkgs;
   haskell.lib.buildStackProject {
-    name = "haskell-template";
-    buildInputs = [ pkgs.cabal-install ];
+    name = "hyperpipe";
+    buildInputs = [ 
+      pkgs.cabal-install 
+      pkgs.haskellPackages.hoogle 
+    ];
     shellHook = ''
       echo 'Entering Environment'
       alias stack='\stack --nix'
