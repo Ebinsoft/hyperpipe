@@ -1,16 +1,16 @@
-name:                haskell-template
+name:                hyperpipe
 
 dependencies:
 - base >= 4.7 && < 5
 - yaml
 - binary
-- pcap
+- bytestring
 
 library:
   source-dirs: src
 
 executables:
-  haskell-template-exe:
+  hyperpipe-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -18,10 +18,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - haskell-template
+    - hyperpipe
 
 tests:
-  haskell-template-test:
+  hyperpipe-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -29,4 +29,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - haskell-template
+    - hyperpipe
