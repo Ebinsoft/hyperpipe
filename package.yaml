@@ -2,7 +2,6 @@ name:                hyperpipe
 
 dependencies:
 - base >= 4.7 && < 5
-- yaml
 - binary
 - bytestring
 
