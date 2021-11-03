@@ -11,6 +11,9 @@
 -- arrive in our new target state.
 module StateModel where
 
+import Data.Function (on)
+import Data.List ((\\), intersectBy, partition)
+
 import EthFrame (EthFrame, VLANTag)
 
 -- | Direction of traffic flowing over an interface
@@ -45,5 +48,11 @@ data Instruction
   | DisableEndpoint Endpoint
   deriving (Eq, Show)
 
-
-
+-- | Generate the list of instructions needed to completely transition from one
+-- state to another
+stepsBetween :: StateModel -> StateModel -> [Instruction]
+stepsBetween (StateModel old) (StateModel new) =
+  let
+    toAdd    = EnableEndpoint <$> (new \\ old)
+    toRemove = DisableEndpoint <$> (old \\ new)
+  in toAdd ++ toRemove
