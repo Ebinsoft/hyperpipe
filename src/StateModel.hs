@@ -11,8 +11,7 @@
 -- arrive in our new target state.
 module StateModel where
 
-import Data.Function (on)
-import Data.List ((\\), intersectBy, partition)
+import Data.List ((\\))
 
 import EthFrame (EthFrame, VLANTag)
 
