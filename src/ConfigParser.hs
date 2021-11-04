@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Module : ConfigParser
+--
+-- A module for parsing YAML configuration files that define the `Endpoint`s of
+-- a `StateModel` (see the "Configuration File" page of the wiki for an
+-- example).
 module ConfigParser where
 
 import Control.Applicative ((<|>))
