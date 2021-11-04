@@ -54,4 +54,4 @@ stepsBetween (StateModel old) (StateModel new) =
   let
     toAdd    = EnableEndpoint <$> (new \\ old)
     toRemove = DisableEndpoint <$> (old \\ new)
-  in toAdd ++ toRemove
+  in toRemove ++ toAdd
