@@ -4,7 +4,7 @@
 --
 -- A module for parsing YAML configuration files that define a `StateModel` (see
 -- the "Configuration File" page of the wiki for an example).
-module ConfigParser
+module Hyperpipe.ConfigParser
   ( parseCfgData
   , parseCfgFile
   ) where
@@ -17,8 +17,8 @@ import Data.Maybe (catMaybes)
 import qualified Data.Text as T
 import Data.YAML
 
-import EthFrame
-import StateModel
+import Hyperpipe.EthFrame
+import Hyperpipe.StateModel
 
 instance FromYAML StateModel where
   parseYAML = withMap "StateModel" $ \m -> do

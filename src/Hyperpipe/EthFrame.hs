@@ -1,4 +1,4 @@
-module EthFrame where
+module Hyperpipe.EthFrame where
 
 import Data.Binary (Binary(..))
 import Data.ByteString.Lazy (ByteString(..))

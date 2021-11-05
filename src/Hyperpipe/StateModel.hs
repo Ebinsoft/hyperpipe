@@ -9,11 +9,11 @@
 -- We can pull in some target `StateModel` from a config file, compare it to our
 -- current state, and generate the exact sequence of `Instruction`s needed to
 -- arrive in our new target state.
-module StateModel where
+module Hyperpipe.StateModel where
 
 import Data.List ((\\))
 
-import EthFrame (EthFrame, VLANTag)
+import Hyperpipe.EthFrame (EthFrame, VLANTag)
 
 -- | Direction of traffic flowing over an interface
 data FlowDir = Input | Output
