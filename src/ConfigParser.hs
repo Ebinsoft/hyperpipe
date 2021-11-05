@@ -16,39 +16,27 @@ import Data.YAML
 import EthFrame
 import StateModel
 
--- | Intermediate representation for `StateModel` that is parsed from YAML file
-data ModelCfg = ModelCfg
-  { inputs  :: [IfaceCfg]
-  , outputs :: [IfaceCfg]
-  }
-  deriving Show
 
--- | Individual network interface defined in YAML config file
-data IfaceCfg = IfaceCfg
-  { ifName :: String
-  , ifOps  :: [FrameOp]
-  }
-  deriving Show
+instance FromYAML StateModel where
+  parseYAML = withMap "StateModel" $ \m -> do
+    ins  <- m .: "inputs" >>= parseEndpoints Input
+    outs <- m .: "outputs" >>= parseEndpoints Output
+    return $ StateModel (ins ++ outs)
 
-instance FromYAML ModelCfg where
-  parseYAML = withMap "ModelCfg" $ \m -> do
-    ins  <- m .: "inputs" >>= parseIfaces
-    outs <- m .: "outputs" >>= parseIfaces
-    return $ ModelCfg ins outs
-
--- | Parse a list of interfaces from a mapping where each key is the name of the
--- interface, and the value is a mapping of options
-parseIfaces :: Mapping Pos -> Parser [IfaceCfg]
-parseIfaces m = do
+-- | Parse a list of interfaces as endpoints with a given direction,
+-- from a mapping where each key is the name of the interface, and the
+-- value is a mapping of options
+parseEndpoints :: FlowDir -> Mapping Pos -> Parser [Endpoint]
+parseEndpoints dir m = do
   names <- mapM (withStr "string" return) (M.keys m)
   mapM parseIface names
  where
   parseIface n = do
-    val  <- (m .: n :: Parser (Node Pos))
-    -- treat null as empty dict, otherwise parse options mapping
-    opts <-
+    val <- (m .: n :: Parser (Node Pos))
+      -- treat null as empty dict, otherwise parse options mapping
+    ops <-
       withNull "null" (return []) val <|> withMap "iface options" parseOps val
-    return $ IfaceCfg (T.unpack n) opts
+    return $ Endpoint (T.unpack n) dir ops
 
 -- | Parse a list of frame operations from a YAML mapping
 parseOps :: Mapping Pos -> Parser [FrameOp]
@@ -66,4 +54,3 @@ parseVLANOp m = case parseEither (m .: "vlan" :: Parser (Node Pos)) of
  where
   stripV = return (Just StripVLAN)
   setV i = return (Just (SetVLAN (VLANTag $ fromIntegral i)))
-
