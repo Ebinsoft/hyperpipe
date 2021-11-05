@@ -2,9 +2,8 @@
 
 -- | Module : ConfigParser
 --
--- A module for parsing YAML configuration files that define a
--- `StateModel` (see the "Configuration File" page of the wiki for an
--- example).
+-- A module for parsing YAML configuration files that define a `StateModel` (see
+-- the "Configuration File" page of the wiki for an example).
 module ConfigParser
   ( parseCfgData
   , parseCfgFile
@@ -27,8 +26,8 @@ instance FromYAML StateModel where
     outs <- m .: "outputs" >>= parseEndpoints Output
     return $ StateModel (ins ++ outs)
 
--- | Attempt to construct a `StateModel` from the contents of a
--- configuration file
+-- | Attempt to construct a `StateModel` from the contents of a configuration
+-- file
 parseCfgData :: B.ByteString -> Either String StateModel
 parseCfgData cfg =
   let prettyErr (p, e) = prettyPosWithSource p cfg " error" ++ e
@@ -42,9 +41,9 @@ parseCfgFile path = do
   let prettyErr (p, e) = path ++ ":" ++ prettyPosWithSource p raw " error" ++ e
   return $ first prettyErr (decode1 raw)
 
--- | Parse a list of interfaces as endpoints with a given direction,
--- from a mapping where each key is the name of the interface, and the
--- value is a mapping of options
+-- | Parse a list of interfaces as endpoints with a given direction, from a
+-- mapping where each key is the name of the interface, and the value is a
+-- mapping of options
 parseEndpoints :: FlowDir -> Mapping Pos -> Parser [Endpoint]
 parseEndpoints dir m = do
   names <- mapM (withStr "string" return) (M.keys m)
