@@ -2,12 +2,17 @@
 
 -- | Module : ConfigParser
 --
--- A module for parsing YAML configuration files that define the `Endpoint`s of
--- a `StateModel` (see the "Configuration File" page of the wiki for an
+-- A module for parsing YAML configuration files that define a
+-- `StateModel` (see the "Configuration File" page of the wiki for an
 -- example).
-module ConfigParser where
+module ConfigParser
+  ( parseCfgData
+  , parseCfgFile
+  ) where
 
 import Control.Applicative ((<|>))
+import Data.Bifunctor (first)
+import Data.ByteString.Lazy as B
 import qualified Data.Map as M
 import Data.Maybe (catMaybes)
 import qualified Data.Text as T
@@ -16,12 +21,26 @@ import Data.YAML
 import EthFrame
 import StateModel
 
-
 instance FromYAML StateModel where
   parseYAML = withMap "StateModel" $ \m -> do
     ins  <- m .: "inputs" >>= parseEndpoints Input
     outs <- m .: "outputs" >>= parseEndpoints Output
     return $ StateModel (ins ++ outs)
+
+-- | Attempt to construct a `StateModel` from the contents of a
+-- configuration file
+parseCfgData :: B.ByteString -> Either String StateModel
+parseCfgData cfg =
+  let prettyErr (p, e) = prettyPosWithSource p cfg " error" ++ e
+  in first prettyErr (decode1 cfg)
+
+-- | Open a config file at the given path and attempt to construct a
+-- `StateModel` from its contents
+parseCfgFile :: String -> IO (Either String StateModel)
+parseCfgFile path = do
+  raw <- B.readFile path
+  let prettyErr (p, e) = path ++ ":" ++ prettyPosWithSource p raw " error" ++ e
+  return $ first prettyErr (decode1 raw)
 
 -- | Parse a list of interfaces as endpoints with a given direction,
 -- from a mapping where each key is the name of the interface, and the
@@ -54,3 +73,4 @@ parseVLANOp m = case parseEither (m .: "vlan" :: Parser (Node Pos)) of
  where
   stripV = return (Just StripVLAN)
   setV i = return (Just (SetVLAN (VLANTag $ fromIntegral i)))
+
