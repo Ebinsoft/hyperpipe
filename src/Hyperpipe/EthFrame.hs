@@ -1,12 +1,14 @@
 module Hyperpipe.EthFrame where
 
 import Data.Binary (Binary(..))
+import Data.Binary.Get
 import Data.ByteString.Lazy (ByteString(..))
 import qualified Data.ByteString.Lazy as B
 import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Word (Word16)
 import Numeric (showHex)
+import Data.Binary.Get (getWord16le)
 
 -- | MAC Address
 newtype MACAddr = MACAddr ByteString
@@ -39,4 +41,10 @@ data EthFrame = EthFrame
 
 instance Binary EthFrame where
   get = undefined
+  put = undefined
+
+instance Binary EtherType where
+  get = do
+    et <- getWord16le
+    return $ EtherType et
   put = undefined
