@@ -1,10 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
--- Module: EthFrame
+-- | Module: EthFrame
 --
 -- An EthFrame consists of the Destination Mac, Source Mac, EtherType, optional
 -- VLANTag, and remaining payload of a network packet.
-
+--
 -- The EthFrame's get and put functions will handle conversion between a lazy
 -- Bytestring and EthFrame.
 
@@ -71,8 +71,6 @@ data EthFrame = EthFrame
 
 -- | Binary instance to get/put an EthFrame
 instance Binary EthFrame where
--- | Attempt to construct a EthFrame from a bytestring packet, checking if
--- a VLANTag exists, and getting the proper off-set for EtherType if it does
   get = do
     dst     <- get
     src     <- get
@@ -88,8 +86,6 @@ instance Binary EthFrame where
       , framePayload = payload
       }
 
--- | Attempt to put an EthFrame into a bytestring, checking if the EthFrame's
--- VLANTag exists, and properly encoding it if it does
   put (EthFrame dst src et vt payload) = do
     put dst
     put src
