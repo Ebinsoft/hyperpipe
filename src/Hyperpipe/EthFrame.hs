@@ -36,8 +36,8 @@ instance Show MACAddr where
 -- | Custom Binary instance to put/get 6 bytes
 instance Binary MACAddr where
   get = do
-    mac <- getLazyByteString 6
-    return $ MACAddr mac
+    m <- getLazyByteString 6
+    return $ MACAddr m
 
   put (MACAddr m) = putLazyByteString m
 
