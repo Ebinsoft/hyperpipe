@@ -45,7 +45,7 @@ instance Binary MACAddr where
 newtype EtherType = EtherType Word16
   deriving (Show, Eq, Num)
 
--- | Simpole Binary instance to get/put a Word16 in big endian
+-- | Simple Binary instance to get/put a Word16 in big endian
 instance Binary EtherType where
   get = EtherType <$> getWord16be
   put (EtherType e) = putWord16be e
