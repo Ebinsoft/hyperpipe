@@ -4,12 +4,11 @@ import Data.Binary (Binary(..))
 import Data.Binary.Get
 import Data.ByteString.Lazy (ByteString(..))
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString as B
 import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Word (Word16)
 import Numeric (showHex)
-import Data.Binary.Put (putWord16le)
+import Data.Binary.Put (putWord16le, putByteString, putLazyByteString)
 
 -- | MAC Address
 newtype MACAddr = MACAddr ByteString
@@ -17,7 +16,7 @@ newtype MACAddr = MACAddr ByteString
 
 -- | Custom show instance that writes MAC addresses like: "12:34:45:67:89:AB"
 instance Show MACAddr where
-  show (MACAddr bs) = intercalate ":" (map showByte $ B.unpack bs)
+  show (MACAddr bs) = intercalate ":" (map showByte $ BL.unpack bs)
    where
     showByte w =
       let hex = map toUpper $ showHex w ""
@@ -56,4 +55,4 @@ instance Binary MACAddr where
     mac <- getLazyByteString 6
     return $ MACAddr mac 
 
-  put = undefined
+  put (MACAddr m)= putLazyByteString m
