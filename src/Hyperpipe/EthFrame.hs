@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Hyperpipe.EthFrame where
 
 import Data.Binary (Binary(..))
@@ -9,6 +10,7 @@ import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Word (Word16)
 import Numeric (showHex)
+import Data.Maybe (isNothing)
 
 -- | MAC Address
 newtype MACAddr = MACAddr ByteString
@@ -24,16 +26,20 @@ instance Show MACAddr where
 
 -- | 2-byte EtherType, specifies the protocol of the frame.
 newtype EtherType = EtherType Word16
-  deriving (Show, Eq)
+  deriving (Show, Eq, Num)
 
 -- | 2-byte VLAN tag
 newtype VLANTag = VLANTag Word16
   deriving (Show, Eq)
 
+instance Binary VLANTag where
+    get = VLANTag <$> getWord16le
+    put (VLANTag vt) = putWord16le vt
+
 -- | The ethernet frame structure,
 data EthFrame = EthFrame
-  { srcMac       :: MACAddr       -- ^ source MAC address
-  , dstMac       :: MACAddr       -- ^ destination MAC address
+  { dstMac       :: MACAddr       -- ^ destination MAC address
+  , srcMac       :: MACAddr       -- ^ source MAC address
   , ethType      :: EtherType     -- ^ EtherType of frame
   , frameVlan    :: Maybe VLANTag -- ^ VLAN tag of frame (if present)
   , framePayload :: ByteString    -- ^ payload (remainder of frame after EthType)
@@ -41,12 +47,13 @@ data EthFrame = EthFrame
 
 instance Binary EthFrame where
   get = do
-    mac1    <- get
-    mac2    <- get
+    dst     <- get
+    src     <- get
     et      <- get
-    vt      <- get
+    vt <- if et == 0x8100 then Just <$> get else return Nothing
+    et <- if isNothing vt then return et else get
     payload <- getRemainingLazyByteString
-    EthFrame mac1 mac2 et vt <$> getRemainingLazyByteString
+    return $ EthFrame {dstMac=dst, srcMac=src, ethType=et, frameVlan=vt, framePayload=payload}
 
   put (EthFrame mac1 mac2 et vt payload) = do
     put mac1
@@ -55,20 +62,9 @@ instance Binary EthFrame where
     put vt
     putLazyByteString payload
 
-
-instance Binary VLANTag where
-  get = do
-    vt <- getWord16le
-    return $ VLANTag vt
-  put (VLANTag vt) = do
-    putWord16le vt
-
 instance Binary EtherType where
-  get = do
-    et <- getWord16le
-    return $ EtherType et
-  put (EtherType e) = do
-    putWord16le e
+  get = EtherType <$> getWord16le
+  put (EtherType e) = putWord16le e
 
 instance Binary MACAddr where
   get = do
