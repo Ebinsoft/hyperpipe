@@ -9,6 +9,7 @@ import Data.List (intercalate)
 import Data.Word (Word16)
 import Numeric (showHex)
 import Data.Binary.Get (getWord16le)
+import Data.Binary.Put (putWord16le)
 
 -- | MAC Address
 newtype MACAddr = MACAddr ByteString
@@ -47,4 +48,5 @@ instance Binary EtherType where
   get = do
     et <- getWord16le
     return $ EtherType et
-  put = undefined
+  put (EtherType e) = do
+    putWord16le e
