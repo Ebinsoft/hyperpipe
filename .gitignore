@@ -1,6 +1,7 @@
 .stack-work/
 dist/
 dist-newstyle/
+.vscode/
 *.cabal
 *~
 .dir-locals.el
