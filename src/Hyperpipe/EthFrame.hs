@@ -40,8 +40,27 @@ data EthFrame = EthFrame
   }
 
 instance Binary EthFrame where
-  get = undefined
-  put = undefined
+  get = do
+    mac1 <- get
+    mac2 <- get
+    et <- get
+    vt <- get
+    EthFrame mac1 mac2 et vt <$> getRemainingLazyByteString
+    
+  put (EthFrame mac1 mac2 et vt payload) = do
+    put mac1
+    put mac2
+    put et
+    put vt
+    putLazyByteString payload
+    
+
+instance Binary VLANTag where
+  get = do
+    vt <- getWord16le
+    return $ VLANTag vt
+  put (VLANTag vt) = do
+    putWord16le vt
 
 instance Binary EtherType where
   get = do
