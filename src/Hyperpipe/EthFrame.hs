@@ -3,7 +3,7 @@ module Hyperpipe.EthFrame where
 
 import Data.Binary (Binary(..))
 import Data.Binary.Get
-import Data.Binary.Put (putByteString, putLazyByteString, putWord16le)
+import Data.Binary.Put (putByteString, putLazyByteString, putWord16be)
 import Data.ByteString.Lazy (ByteString(..))
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (toUpper)
@@ -33,8 +33,8 @@ newtype VLANTag = VLANTag Word16
   deriving (Show, Eq)
 
 instance Binary VLANTag where
-    get = VLANTag <$> getWord16le
-    put (VLANTag vt) = putWord16le vt
+    get = VLANTag <$> getWord16be
+    put (VLANTag vt) = putWord16be vt
 
 -- | The ethernet frame structure,
 data EthFrame = EthFrame
@@ -43,7 +43,7 @@ data EthFrame = EthFrame
   , ethType      :: EtherType     -- ^ EtherType of frame
   , frameVlan    :: Maybe VLANTag -- ^ VLAN tag of frame (if present)
   , framePayload :: ByteString    -- ^ payload (remainder of frame after EthType)
-  }
+  } deriving (Show, Eq)
 
 instance Binary EthFrame where
   get = do
@@ -59,12 +59,14 @@ instance Binary EthFrame where
     put mac1
     put mac2
     put et
-    put vt
+    case vt of 
+      Nothing -> return ()
+      Just vt' -> put vt'
     putLazyByteString payload
 
 instance Binary EtherType where
-  get = EtherType <$> getWord16le
-  put (EtherType e) = putWord16le e
+  get = EtherType <$> getWord16be
+  put (EtherType e) = putWord16be e
 
 instance Binary MACAddr where
   get = do
