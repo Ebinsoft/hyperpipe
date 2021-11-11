@@ -6,7 +6,7 @@
 -- VLANTag, and remaining payload of a network packet.
 --
 -- The EthFrame's get and put functions will handle conversion between a lazy
--- Bytestring and EthFrame.
+-- ByteString and EthFrame.
 
 module Hyperpipe.EthFrame where
 
@@ -54,7 +54,7 @@ instance Binary EtherType where
 newtype VLANTag = VLANTag Word16
   deriving (Show, Eq)
 
--- | A simple Binary instnace to get/put a Word16 in big endian, like EtherType
+-- | A simple Binary instance to get/put a Word16 in big endian, like EtherType
 instance Binary VLANTag where
   get = VLANTag <$> getWord16be
   put (VLANTag vt) = putWord16be vt
