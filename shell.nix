@@ -1,7 +1,10 @@
 { pkgs ? import <nixpkgs> {} }:
-pkgs.mkShell {
+pkgs.haskellPackages.shellFor {
+  packages = p: [
+    (import ./default.nix {})
+  ];
   buildInputs = [
-    (import ./default.nix { inherit pkgs; })
     pkgs.cabal-install
   ];
+  withHoogle = true;
 }
