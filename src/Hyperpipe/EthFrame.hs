@@ -92,7 +92,7 @@ instance Binary EthFrame where
     put et
     case vt of
       Nothing  -> return ()
-      Just vt' -> put vt'
+      Just vt' -> putWord16be 0x8100 >> put vt'
     putLazyByteString payload
 
 -- | Temporary Test Packets - should add to test or remove
