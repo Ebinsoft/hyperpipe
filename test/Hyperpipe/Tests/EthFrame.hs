@@ -45,10 +45,6 @@ tests = testGroup
 prop_identity :: EthFrame -> Property
 prop_identity ef = let bs = encode ef :: ByteString in decode bs === ef
 
-
 prop_short :: ByteString -> Property
-prop_short bs = BL.length bs < 14 ==> isLeft
-    (decodeOrFail bs :: Either
-          (ByteString, ByteOffset, String)
-          (ByteString, ByteOffset, EthFrame)
-    )
+prop_short bs =
+    BL.length bs < 14 ==> isLeft (parseFrame bs :: Either String EthFrame)

@@ -10,7 +10,7 @@
 
 module Hyperpipe.EthFrame where
 
-import Data.Binary (Binary(..))
+import Data.Binary (Binary(..), decodeOrFail)
 import Data.Binary.Get
 import Data.Binary.Put (putByteString, putLazyByteString, putWord16be)
 import Data.ByteString.Lazy (ByteString(..))
@@ -94,6 +94,12 @@ instance Binary EthFrame where
       Just vt' -> putWord16be 0x8100 >> put vt'
     put et
     putLazyByteString payload
+
+-- | Helper function for testing for Failure
+parseFrame :: ByteString -> Either String EthFrame
+parseFrame bs = case decodeOrFail bs of
+  Left  (bs, bo, s ) -> Left s
+  Right (bs, bo, et) -> Right et
 
 -- | Temporary Test Packets - should add to test or remove
 packet = BL.pack [72,93,54,244,186,194,0,216,97,54,118,90,8,0,69,0,0,76,85,18,64,0,64,17,228,7,192,168,1,245,109,200,209,33,162,120,195,87,0,56,1,209,175,205,0,6,0,2,70,93,192,209,115,85,252,209,209,39,198,76,233,196,110,170,250,247,240,131,85,199,92,132,136,166,165,177,48,86,74,239,32,53,217,39,37,46,55,98,0,128]
