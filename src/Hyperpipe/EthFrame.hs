@@ -89,10 +89,10 @@ instance Binary EthFrame where
   put (EthFrame dst src et vt payload) = do
     put dst
     put src
-    put et
     case vt of
       Nothing  -> return ()
       Just vt' -> putWord16be 0x8100 >> put vt'
+    put et
     putLazyByteString payload
 
 -- | Temporary Test Packets - should add to test or remove
