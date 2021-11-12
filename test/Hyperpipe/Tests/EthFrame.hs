@@ -39,12 +39,12 @@ tests = testGroup
         prop_identity
     , testProperty
         "decodeOrFailing EthFrame with too few bytes results in a Left"
-        prop_short
+        prop_failOnTooFewBytes
     ]
 
 prop_identity :: EthFrame -> Property
 prop_identity ef = let bs = encode ef :: ByteString in decode bs === ef
 
-prop_short :: ByteString -> Property
-prop_short bs =
+prop_failOnTooFewBytes :: ByteString -> Property
+prop_failOnTooFewBytes bs =
     BL.length bs < 14 ==> isLeft (parseFrame bs :: Either String EthFrame)
