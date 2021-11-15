@@ -54,7 +54,7 @@ parseEndpoints dir m = do
       -- treat null as empty dict, otherwise parse options mapping
     ops <-
       withNull "null" (return []) val <|> withMap "iface options" parseOps val
-    return $ Endpoint (T.unpack n) dir ops
+    return $ Endpoint (IfaceName $ T.unpack n) dir ops
 
 -- | Parse a list of frame operations from a YAML mapping
 parseOps :: Mapping Pos -> Parser [FrameOp]

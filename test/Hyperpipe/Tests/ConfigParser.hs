@@ -37,17 +37,25 @@ outputs:
 
 validCfgModel = StateModel
   [ Endpoint
-    { ifaceName  = "eno1"
+    { ifaceName  = IfaceName "eno1"
     , trafficDir = Input
     , frameOps   = [SetVLAN (VLANTag 171)]
     }
   , Endpoint
-    { ifaceName  = "eno2"
+    { ifaceName  = IfaceName "eno2"
     , trafficDir = Input
     , frameOps   = [SetVLAN (VLANTag 69)]
     }
-  , Endpoint { ifaceName = "eno3", trafficDir = Output, frameOps = [] }
-  , Endpoint { ifaceName = "eno4", trafficDir = Output, frameOps = [StripVLAN] }
+  , Endpoint
+    { ifaceName  = IfaceName "eno3"
+    , trafficDir = Output
+    , frameOps   = []
+    }
+  , Endpoint
+    { ifaceName  = IfaceName "eno4"
+    , trafficDir = Output
+    , frameOps   = [StripVLAN]
+    }
   ]
 
 invalidCfgYaml :: ByteString

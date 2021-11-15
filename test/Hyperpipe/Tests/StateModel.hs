@@ -13,6 +13,9 @@ instance Arbitrary FlowDir where
 instance Arbitrary FrameOp where
   arbitrary = oneof [SetVLAN . VLANTag <$> arbitrary, return StripVLAN]
 
+instance Arbitrary IfaceName where
+  arbitrary = IfaceName <$> arbitrary
+
 instance Arbitrary Endpoint where
   arbitrary = Endpoint <$> arbitrary <*> arbitrary <*> arbitrary
 
