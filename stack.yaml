@@ -6,3 +6,6 @@ packages:
 nix:
   pure: true
   shell-file: shell.nix
+
+extra-deps:
+- pcap-0.4.5.2@sha256:9f9f64abf126b9bbbe2698dd2ec31d25b445d70aab6c845aadd75ae79b6cc0b3,1313
