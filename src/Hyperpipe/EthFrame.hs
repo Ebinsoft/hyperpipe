@@ -100,3 +100,11 @@ parseFrame :: ByteString -> Either String EthFrame
 parseFrame bs = case decodeOrFail bs of
   Left  (bs, bo, s ) -> Left s
   Right (bs, bo, et) -> Right et
+
+-- | Assigns a given VLAN tag to a frame (overwriting any existing tag)
+setVlan :: VLANTag -> EthFrame -> EthFrame
+setVlan vlan ef = ef { frameVlan = Just vlan }
+
+-- | Removes any VLAN tag from the frame
+stripVlan :: EthFrame -> EthFrame
+stripVlan ef = ef { frameVlan = Nothing }
