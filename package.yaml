@@ -8,6 +8,7 @@ dependencies:
 - containers
 - text
 - mtl
+- pcap
 
 library:
   source-dirs: src

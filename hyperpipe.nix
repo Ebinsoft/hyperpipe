@@ -1,5 +1,5 @@
 { mkDerivation, base, binary, bytestring, containers, hpack, HsYAML
-, lib, mtl, string-interpolate, tasty, tasty-hunit
+, lib, mtl, pcap, string-interpolate, tasty, tasty-hunit
 , tasty-quickcheck, text
 }:
 mkDerivation {
@@ -9,15 +9,15 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base binary bytestring containers HsYAML mtl text
+    base binary bytestring containers HsYAML mtl pcap text
   ];
   libraryToolDepends = [ hpack ];
   executableHaskellDepends = [
-    base binary bytestring containers HsYAML mtl text
+    base binary bytestring containers HsYAML mtl pcap text
   ];
   testHaskellDepends = [
-    base binary bytestring containers HsYAML mtl string-interpolate
-    tasty tasty-hunit tasty-quickcheck text
+    base binary bytestring containers HsYAML mtl pcap
+    string-interpolate tasty tasty-hunit tasty-quickcheck text
   ];
   prePatch = "hpack";
   license = lib.licenses.bsd3;
