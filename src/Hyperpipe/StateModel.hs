@@ -27,10 +27,14 @@ data FrameOp
   | StripVLAN
   deriving (Eq, Show)
 
+-- | String type containing the name of a network interface
+newtype IfaceName = IfaceName String
+  deriving (Eq, Show, Ord)
+
 -- | A network interface on which traffic is being received or sent, associated
 -- with some operations that are performed on every frame.
 data Endpoint = Endpoint
-  { ifaceName  :: String    -- ^ Name of the network interface
+  { ifaceName  :: IfaceName -- ^ Name of the network interface
   , trafficDir :: FlowDir   -- ^ Whether traffic should be sent or received
   , frameOps   :: [FrameOp] -- ^ Operations to perform on each frame that passes
                             -- through the interface
