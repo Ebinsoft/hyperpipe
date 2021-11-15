@@ -52,7 +52,7 @@ instance Binary EtherType where
 
 -- | 2-byte VLAN tag
 newtype VLANTag = VLANTag Word16
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 -- | A simple Binary instance to get/put a Word16 in big endian, like EtherType
 instance Binary VLANTag where

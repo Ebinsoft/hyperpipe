@@ -17,7 +17,7 @@ import Hyperpipe.EthFrame (EthFrame, VLANTag)
 
 -- | Direction of traffic flowing over an interface
 data FlowDir = Input | Output
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 -- | Abstract representation of a function over an `EthFrame` (for now this just
 -- supports adding or removing VLAN tags, but could eventually include filtering
@@ -25,7 +25,7 @@ data FlowDir = Input | Output
 data FrameOp
   = SetVLAN VLANTag
   | StripVLAN
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 -- | A network interface on which traffic is being received or sent, associated
 -- with some operations that are performed on every frame.
@@ -35,7 +35,7 @@ data Endpoint = Endpoint
   , frameOps   :: [FrameOp] -- ^ Operations to perform on each frame that passes
                             -- through the interface
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 -- | The application's behavior abstractly modelled as a set of `Endpoint`s.
 newtype StateModel = StateModel [Endpoint]
