@@ -1,7 +1,7 @@
 module Hyperpipe.StateMachine where
 
 import Control.Concurrent
-  (Chan, ThreadId, forkIO, killThread, readChan, writeChan)
+  (Chan, ThreadId, forkIO, killThread, readChan, threadDelay, writeChan)
 import Control.Monad (forever)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
 import Data.Binary (encode)
@@ -32,6 +32,12 @@ type StateMachine a = StateT Env IO a
 mainLoop :: StateMachine ()
 mainLoop = undefined
 
+runWithConfig :: StateModel -> StateMachine ()
+runWithConfig model = do
+  let instructions = stepsBetween (StateModel []) model
+  mapM_ interpret instructions
+  forever $ liftIO (threadDelay 100000000)
+
 -- | Execute an `Instruction` as an effect in our `StateMachine`
 interpret :: Instruction -> StateMachine ()
 interpret (EnableEndpoint ep) = do
@@ -39,7 +45,7 @@ interpret (EnableEndpoint ep) = do
   wmap' <- liftIO $ createWorker ep env
   put env
 interpret (DisableEndpoint ep) = do
-  env <- get
+  env   <- get
   wmap' <- liftIO $ destroyWorker ep env
   put env
 
@@ -67,7 +73,7 @@ runWorker ep chn = do
   case trafficDir ep of
     Input  -> forever $ runInput hnd f chn
     Output -> forever $ runOutput hnd f chn
-  
+
 -- | Convert a list of `FrameOp`s into a single function over `EthFrame`s doing
 -- all of the ops.
 runOps :: [FrameOp] -> (EthFrame -> EthFrame)
