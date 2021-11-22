@@ -35,7 +35,7 @@ parseCfgData cfg =
 
 -- | Open a config file at the given path and attempt to construct a
 -- `StateModel` from its contents
-parseCfgFile :: String -> IO (Either String StateModel)
+parseCfgFile :: FilePath -> IO (Either String StateModel)
 parseCfgFile path = do
   raw <- B.readFile path
   let prettyErr (p, e) = path ++ ":" ++ prettyPosWithSource p raw " error" ++ e
