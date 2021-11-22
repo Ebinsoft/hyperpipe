@@ -2,19 +2,29 @@ module Hyperpipe.StateMachine where
 
 import Control.Concurrent
   (Chan, ThreadId, forkIO, killThread, readChan, writeChan)
-import Control.Monad.State.Strict
+import Control.Monad (forever)
+import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
 import Data.Binary (encode)
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as BL
 import Data.Map.Strict (Map(..))
 import qualified Data.Map.Strict as M
+import Data.Ord (comparing)
 import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 
 import Hyperpipe.EthFrame
 import Hyperpipe.StateModel
 
+-- | Custom newtype wrapper for using `Endpoint` as the key in an ordered `Map`
+-- (orders by interface name).
+newtype Key = Key Endpoint
+  deriving (Show, Eq)
+
+instance Ord Key where
+  compare (Key e) (Key f) = comparing ifaceName e f
+
 type Elem = Either ByteString EthFrame
-type Env = (Chan Elem, Map IfaceName ThreadId)
+type Env = (Chan Elem, Map Key ThreadId)
 
 type StateMachine a = StateT Env IO a
 
@@ -24,45 +34,40 @@ mainLoop = undefined
 
 -- | Execute an `Instruction` as an effect in our `StateMachine`
 interpret :: Instruction -> StateMachine ()
-interpret (EnableEndpoint  ep) = enableEndpoint ep
-interpret (DisableEndpoint ep) = disableEndpoint ep
+interpret (EnableEndpoint ep) = do
+  env   <- get
+  wmap' <- liftIO $ createWorker ep env
+  put env
+interpret (DisableEndpoint ep) = do
+  env <- get
+  wmap' <- liftIO $ destroyWorker ep env
+  put env
 
--- | Create a thread to transfer network traffic from or to a network
--- interface. If a thread for the same interface already exists, kill it before
--- spinning up the new one.
-enableEndpoint :: Endpoint -> StateMachine ()
-enableEndpoint ep = do
-  let name = ifaceName ep
-  (chn, tmap) <- get
-  -- if we already have a thread running on an interface, kill it
-  liftIO $ maybe (pure ()) killThread (M.lookup name tmap)
-
-  tid <- liftIO (forkIO $ runEndpoint ep chn)
-  let tmap' = M.insert name tid tmap
-  put (chn, tmap')
+-- | Start a thread to transfer traffic to or from a network interface. If a
+-- thread for the same interface already exists, kill it.
+createWorker :: Endpoint -> Env -> IO Env
+createWorker ep (chn, wmap) = do
+  maybe (pure ()) killThread (M.lookup (Key ep) wmap)
+  tid <- forkIO $ runWorker ep chn
+  return (chn, M.insert (Key ep) tid wmap)
 
 -- | Kill the thread transferring traffic to or from the given network interface
 -- (if it exists).
-disableEndpoint :: Endpoint -> StateMachine ()
-disableEndpoint ep = do
-  let name = ifaceName ep
-  (chn, tmap) <- get
-  case M.lookup name tmap of
-    Nothing  -> pure ()
-    Just tid -> do
-      liftIO $ killThread tid
-      put (chn, M.delete name tmap)
+destroyWorker :: Endpoint -> Env -> IO Env
+destroyWorker ep env@(chn, wmap) = case M.lookup (Key ep) wmap of
+  Nothing  -> return env
+  Just tid -> killThread tid >> return (chn, M.delete (Key ep) wmap)
 
 -- | Infinite loop transferring packets between `Chan` and network interface
-runEndpoint :: Endpoint -> Chan Elem -> IO ()
-runEndpoint ep chn = do
+runWorker :: Endpoint -> Chan Elem -> IO ()
+runWorker ep chn = do
   let (IfaceName name) = ifaceName ep
   hnd <- openLive name 10000 True 0
   let f = runOps $ frameOps ep
   case trafficDir ep of
     Input  -> forever $ runInput hnd f chn
     Output -> forever $ runOutput hnd f chn
-
+  
 -- | Convert a list of `FrameOp`s into a single function over `EthFrame`s doing
 -- all of the ops.
 runOps :: [FrameOp] -> (EthFrame -> EthFrame)
