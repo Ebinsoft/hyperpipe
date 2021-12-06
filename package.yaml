@@ -23,6 +23,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - hyperpipe
+    - optparse-applicative
 
 tests:
   hyperpipe-test:
