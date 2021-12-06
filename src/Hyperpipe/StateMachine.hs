@@ -78,7 +78,7 @@ destroyWorker ep = do
 worker :: Endpoint -> Chan Elem -> Worker ()
 worker ep chn = do
   let (IfaceName name) = ifaceName ep
-  hnd <- liftIO $ openLive name 65535 True 0
+  hnd <- liftIO $ openLive name 65535 True 1000
   let f = runOps $ frameOps ep
   case trafficDir ep of
     Input  -> forever $ runInput hnd f chn
@@ -100,15 +100,18 @@ runInput hnd f chn = do
   let bs' = BL.fromStrict bs
   settings <- ask
   when (debugMode settings) (liftIO $ debugBS bs')
-  elem <- case parseFrame bs' of
-    Left err -> do
-      when (debugMode settings) (liftIO $ putStr "failed to parse: ")
-      liftIO $ putStrLn err
-      return (Left bs')
-    Right ef -> do
-      when (debugMode settings) (liftIO $ putStrLn "parsing successful")
-      return (Right $ f ef)
-  liftIO $ writeChan chn elem
+  if BL.length bs' == 0
+    then return ()
+    else do
+      elem <- case parseFrame bs' of
+        Left err -> do
+          when (debugMode settings) (liftIO $ putStr "failed to parse: ")
+          liftIO $ putStrLn err
+          return (Left bs')
+        Right ef -> do
+          when (debugMode settings) (liftIO $ putStrLn "parsing successful")
+          return (Right $ f ef)
+      liftIO $ writeChan chn elem
  where
   debugBS bs =
     putStr $ "Received packet (" ++ show (BL.length bs) ++ " bytes)\t"
