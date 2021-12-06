@@ -99,10 +99,10 @@ runInput hnd f chn = do
   (_, bs) <- liftIO $ nextBS hnd
   let bs' = BL.fromStrict bs
   settings <- ask
-  when (debugMode settings) (liftIO $ debugBS bs')
   if BL.length bs' == 0
     then return ()
     else do
+      when (debugMode settings) (liftIO $ debugBS bs')
       elem <- case parseFrame bs' of
         Left err -> do
           when (debugMode settings) (liftIO $ putStr "failed to parse: ")
