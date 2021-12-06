@@ -8,6 +8,7 @@ import qualified Data.Map.Strict as M
 import Options.Applicative
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
+import System.IO
 
 import Hyperpipe
 
@@ -17,7 +18,6 @@ data Options = Options
   , optDebug  :: Bool
   }
 
-  
 options :: Parser Options
 options =
   Options
@@ -29,15 +29,15 @@ options =
               "When debug mode is active, each received packet is printed to stdout"
           )
 
-
 optInfo :: ParserInfo Options
 optInfo = info
   (options <**> helper)
   (fullDesc <> header "HYPERPIPE :D")
 
-
 main :: IO ()
 main = do
+  hSetBuffering stdout LineBuffering
+  
   opts <- execParser optInfo
   res  <- parseCfgFile (optConfig opts)
   case res of
