@@ -60,7 +60,7 @@ createWorker ep = do
   -- kill existing thread if it exists
   liftIO $ maybe (pure ()) killThread (M.lookup (Key ep) wmap)
   -- run new thread
-  debugStr $ "Creating worker for " ++ show (ifaceName ep)
+  debugStrLn $ "Creating worker for " ++ show (ifaceName ep)
   settings <- ask
   tid      <- liftIO $ forkIO (runReaderT (worker ep chn) settings)
   put (chn, M.insert (Key ep) tid wmap)
@@ -104,13 +104,13 @@ runInput hnd f chn = do
   if BL.length bs' == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      debugStr $ "Received frame (" ++ show (BL.length bs') ++ " bytes)\t"
+      debugStr $ "Received (" ++ show (BL.length bs') ++ " bytes)\t"
       elem <- case parseFrame bs' of
         Left err -> do
           debugStrLn $ "failed to parse: " ++ err
           return (Left bs')
         Right ef -> do
-          debugStrLn "parsing successful"
+          debugStrLn $ showFrameInfo ef
           return (Right $ f ef)
       liftIO $ writeChan chn elem
 
@@ -123,7 +123,7 @@ runOutput hnd f chn = do
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd (BL.toStrict bs)
-  debugStrLn $ "Sent frame (" ++ show (BL.length bs) ++ " bytes)"
+  debugStrLn $ "Sent     (" ++ show (BL.length bs) ++ " bytes)"
 
 -- | Print a string only when debug mode is enabled in `Settings`.
 debugStr :: (MonadReader Settings m, MonadIO m) => String -> m ()

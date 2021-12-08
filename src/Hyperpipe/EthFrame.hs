@@ -108,3 +108,15 @@ setVlan vlan ef = ef { frameVlan = Just vlan }
 -- | Removes any VLAN tag from the frame
 stripVlan :: EthFrame -> EthFrame
 stripVlan ef = ef { frameVlan = Nothing }
+
+-- | Pretty-print frame header information
+showFrameInfo :: EthFrame -> String
+showFrameInfo ef =
+  let
+    src = show $ srcMac ef
+    dst = show $ dstMac ef
+    vlanInfo =
+      maybe "" (\(VLANTag vt) -> "vlan: " ++ show vt ++ ", ") (frameVlan ef)
+    EtherType et = ethType ef
+    typeInfo     = "type: " ++ show et
+  in src ++ " --> " ++ dst ++ " (" ++ vlanInfo ++ typeInfo ++ ")"
