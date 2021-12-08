@@ -3,7 +3,7 @@ module Hyperpipe.StateMachine where
 import Control.Concurrent
   (Chan, ThreadId, forkIO, killThread, readChan, threadDelay, writeChan)
 import Control.Monad (forever, when)
-import Control.Monad.Reader (ReaderT, ask, lift, runReaderT)
+import Control.Monad.Reader (ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
 import Data.Binary (encode)
 import Data.ByteString.Lazy (ByteString)
@@ -29,16 +29,14 @@ type Env = (Chan Elem, Map Key ThreadId)
 
 -- | Read-only configuration options for the `StateMachine` and all of its
 -- `Worker` threads
-newtype Settings = Settings
-  { debugMode :: Bool
+data Settings = Settings
+  { debugMode  :: Bool
+  , bufTimeout :: Int
   }
 
 type StateMachine a = ReaderT Settings (StateT Env IO) a
 type Worker a = ReaderT Settings IO a
 
-
-mainLoop :: StateMachine ()
-mainLoop = undefined
 
 runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
@@ -78,7 +76,8 @@ destroyWorker ep = do
 worker :: Endpoint -> Chan Elem -> Worker ()
 worker ep chn = do
   let (IfaceName name) = ifaceName ep
-  hnd <- liftIO $ openLive name 65535 True 1000
+  timeout <- asks (fromIntegral . bufTimeout)
+  hnd     <- liftIO $ openLive name 65535 True timeout
   let f = runOps $ frameOps ep
   case trafficDir ep of
     Input  -> forever $ runInput hnd f chn
