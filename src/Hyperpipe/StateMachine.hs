@@ -1,9 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Hyperpipe.StateMachine where
 
 import Control.Concurrent
   (Chan, ThreadId, forkIO, killThread, readChan, threadDelay, writeChan)
 import Control.Monad (forever, when)
-import Control.Monad.Reader (ReaderT, ask, asks, lift, runReaderT)
+import Control.Monad.Reader
+  (MonadIO, MonadReader, ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
 import Data.Binary (encode)
 import Data.ByteString.Lazy (ByteString)
@@ -30,8 +33,8 @@ type Env = (Chan Elem, Map Key ThreadId)
 -- | Read-only configuration options for the `StateMachine` and all of its
 -- `Worker` threads
 data Settings = Settings
-  { debugMode  :: Bool
-  , bufTimeout :: Int
+  { debugMode  :: Bool -- ^ when true, packet info is printed while running
+  , bufTimeout :: Int  -- ^ packet buffer timeout for pcap handles
   }
 
 type StateMachine a = ReaderT Settings (StateT Env IO) a
@@ -57,6 +60,7 @@ createWorker ep = do
   -- kill existing thread if it exists
   liftIO $ maybe (pure ()) killThread (M.lookup (Key ep) wmap)
   -- run new thread
+  debugStr $ "Creating worker for " ++ show (ifaceName ep)
   settings <- ask
   tid      <- liftIO $ forkIO (runReaderT (worker ep chn) settings)
   put (chn, M.insert (Key ep) tid wmap)
@@ -97,23 +101,18 @@ runInput :: PcapHandle -> (EthFrame -> EthFrame) -> Chan Elem -> Worker ()
 runInput hnd f chn = do
   (_, bs) <- liftIO $ nextBS hnd
   let bs' = BL.fromStrict bs
-  settings <- ask
   if BL.length bs' == 0
-    then return ()
+    then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      when (debugMode settings) (liftIO $ debugBS bs')
+      debugStr $ "Received frame (" ++ show (BL.length bs') ++ " bytes)\t"
       elem <- case parseFrame bs' of
         Left err -> do
-          when (debugMode settings) (liftIO $ putStr "failed to parse: ")
-          liftIO $ putStrLn err
+          debugStrLn $ "failed to parse: " ++ err
           return (Left bs')
         Right ef -> do
-          when (debugMode settings) (liftIO $ putStrLn "parsing successful")
+          debugStrLn "parsing successful"
           return (Right $ f ef)
       liftIO $ writeChan chn elem
- where
-  debugBS bs =
-    putStr $ "Received packet (" ++ show (BL.length bs) ++ " bytes)\t"
 
 -- | Pull packet from `Chan`, apply function, and write to network interface.
 runOutput :: PcapHandle -> (EthFrame -> EthFrame) -> Chan Elem -> Worker ()
@@ -124,3 +123,14 @@ runOutput hnd f chn = do
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd (BL.toStrict bs)
+  debugStrLn $ "Sent frame (" ++ show (BL.length bs) ++ " bytes)"
+
+-- | Print a string only when debug mode is enabled in `Settings`.
+debugStr :: (MonadReader Settings m, MonadIO m) => String -> m ()
+debugStr s = do
+  isDebug <- asks debugMode
+  when isDebug (liftIO $ putStr s)
+
+-- | Identical to `debugStr` but appends a newline to the end of the string.
+debugStrLn :: (MonadReader Settings m, MonadIO m) => String -> m ()
+debugStrLn s = debugStr $ s ++ "\n"
