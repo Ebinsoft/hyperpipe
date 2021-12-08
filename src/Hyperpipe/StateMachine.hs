@@ -37,7 +37,6 @@ data Settings = Settings
 type StateMachine a = ReaderT Settings (StateT Env IO) a
 type Worker a = ReaderT Settings IO a
 
-defaultSettings = Settings { debugMode = False, bufTimeout = 0 }
 
 runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
