@@ -14,8 +14,9 @@ import Hyperpipe
 
 -- | Data structure holding all possible command-line options for the program
 data Options = Options
-  { optConfig :: String
-  , optDebug  :: Bool
+  { optConfig  :: String
+  , optDebug   :: Bool
+  , optTimeout :: Int
   }
 
 options :: Parser Options
@@ -28,22 +29,33 @@ options =
           <> help
               "When debug mode is active, each received packet is printed to stdout"
           )
+    <*> option
+          auto
+          (  long "timeout"
+          <> short 't'
+          <> metavar "INT"
+          <> showDefault
+          <> value 1000
+          <> help
+              "The packet buffer timeout for each capture device (in microseconds). \
+              \See https://www.tcpdump.org/manpages/pcap.3pcap.html for an explanation of the packet buffer timeout."
+          )
 
 optInfo :: ParserInfo Options
-optInfo = info
-  (options <**> helper)
-  (fullDesc <> header "HYPERPIPE :D")
+optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
-  
+
   opts <- execParser optInfo
   res  <- parseCfgFile (optConfig opts)
   case res of
     Left  err   -> putStrLn err >> exitFailure
     Right model -> do
       chn <- newChan
-      let settings = Settings { debugMode = optDebug opts }
+      let
+        settings =
+          Settings { debugMode = optDebug opts, bufTimeout = optTimeout opts }
       evalStateT (runReaderT (runWithModel model) settings) (chn, M.empty)
 
