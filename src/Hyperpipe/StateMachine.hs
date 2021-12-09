@@ -1,5 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 
+-- | Module: StateMachine
+--
+-- This module contains the entrypoint for the program, and it is where most of
+-- the effectful, IO-centric operations take place.
+--
+-- We call this the `StateMachine` because we are modeling the entire program's
+-- behavior as an abstract state machine where each "state" is a set of
+-- `Endpoint`s (see the documentation of the "StateModel" module).
+--
+-- This ASM "transitions" between states by acting on `Instruction`s, which will
+-- create or destroy the worker threads which send/receive traffic on a network
+-- interface.
 module Hyperpipe.StateMachine where
 
 import Control.Concurrent
@@ -40,7 +52,8 @@ data Settings = Settings
 type StateMachine a = ReaderT Settings (StateT Env IO) a
 type Worker a = ReaderT Settings IO a
 
-
+-- | Bootstrap the `StateMachine` with a `StateModel` the target program
+-- configuration.
 runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
   let instructions = stepsBetween (StateModel []) model
