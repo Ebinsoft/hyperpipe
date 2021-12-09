@@ -1,6 +1,6 @@
 module Main where
 
-import Control.Concurrent (newChan)
+import Control.Concurrent.Chan.Unagi.Bounded (newChan)
 import Control.Monad (when)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State.Strict (evalStateT)
@@ -14,9 +14,10 @@ import Hyperpipe
 
 -- | Data structure holding all possible command-line options for the program
 data Options = Options
-  { optConfig  :: String
-  , optDebug   :: Bool
-  , optTimeout :: Int
+  { optConfig   :: String
+  , optDebug    :: Bool
+  , optTimeout  :: Int
+  , optQueueLen :: Int
   }
 
 options :: Parser Options
@@ -40,6 +41,16 @@ options =
               "The packet buffer timeout for each capture device (in microseconds). \
               \See https://www.tcpdump.org/manpages/pcap.3pcap.html for an explanation of the packet buffer timeout."
           )
+    <*> option
+          auto
+          (  long "queue-size"
+          <> short 'q'
+          <> metavar "INT"
+          <> showDefault
+          <> value 100
+          <> help
+              "Number of packets to hold in the internal queue between input and output interfaces."
+          )
 
 optInfo :: ParserInfo Options
 optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
@@ -53,9 +64,11 @@ main = do
   case res of
     Left  err   -> putStrLn err >> exitFailure
     Right model -> do
-      chn <- newChan
+      (inChn, outChn) <- newChan (optQueueLen opts)
       let
         settings =
           Settings { debugMode = optDebug opts, bufTimeout = optTimeout opts }
-      evalStateT (runReaderT (runWithModel model) settings) (chn, M.empty)
+      evalStateT
+        (runReaderT (runWithModel model) settings)
+        (inChn, outChn, M.empty)
 
