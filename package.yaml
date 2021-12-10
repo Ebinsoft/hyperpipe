@@ -9,6 +9,7 @@ dependencies:
 - text
 - mtl
 - pcap
+- unagi-chan
 
 library:
   source-dirs: src
