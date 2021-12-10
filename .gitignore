@@ -4,4 +4,6 @@ dist-newstyle/
 .vscode/
 *.cabal
 *~
+\#*\#
+.\#*
 .dir-locals.el
