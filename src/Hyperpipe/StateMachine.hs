@@ -55,8 +55,8 @@ data Settings = Settings
 type StateMachine a = ReaderT Settings (StateT Env IO) a
 type Worker a = ReaderT Settings IO a
 
--- | Bootstrap the `StateMachine` with a `StateModel` the target program
--- configuration.
+-- | Bootstrap the `StateMachine` with a `StateModel` representing the target
+-- program configuration.
 runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
   let instructions = stepsBetween (StateModel []) model
@@ -84,8 +84,8 @@ createWorker ep = do
   let f = runOps $ frameOps ep
   let
     worker = case trafficDir ep of
-      Input  -> forever $ inputWorker hnd f inChn
-      Output -> forever $ outputWorker hnd f outChn
+      Input  -> inputWorker hnd f inChn
+      Output -> outputWorker hnd f outChn
 
   -- run thread for new worker
   debugStrLn $ "Creating worker for " ++ name
@@ -112,9 +112,10 @@ runOps (o : os) = runOps os . opToFunc o
   opToFunc (SetVLAN vt) = setVlan vt
   opToFunc StripVLAN    = stripVlan
 
--- | Pull packet from interface handle, apply function, and put into `Chan`.
+-- | Pull packet from interface handle, apply function, and put into channel in
+-- an infinite loop
 inputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> InChan Elem -> Worker ()
-inputWorker hnd f chn = do
+inputWorker hnd f chn = forever $ do
   (_, bs) <- liftIO $ nextBS hnd
   let bs' = BL.fromStrict bs
   if BL.length bs' == 0
@@ -130,9 +131,10 @@ inputWorker hnd f chn = do
           return (Right $ f ef)
       liftIO $ writeChan chn elem
 
--- | Pull packet from `Chan`, apply function, and write to network interface.
+-- | Pull packet from channel, apply function, and write to network interface in
+-- an infinite loop
 outputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> OutChan Elem -> Worker ()
-outputWorker hnd f chn = do
+outputWorker hnd f chn = forever $ do
   elem <- liftIO $ readChan chn
   let
     bs = case elem of
