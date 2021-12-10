@@ -23,9 +23,9 @@ import Control.Monad (forever, when)
 import Control.Monad.Reader
   (MonadIO, MonadReader, ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
-import Data.Binary (encode)
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as BL
+import Data.Persist (encode, decode)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.Map.Strict (Map(..))
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
@@ -117,15 +117,14 @@ runOps (o : os) = runOps os . opToFunc o
 inputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> InChan Elem -> Worker ()
 inputWorker hnd f chn = forever $ do
   (_, bs) <- liftIO $ nextBS hnd
-  let bs' = BL.fromStrict bs
-  if BL.length bs' == 0
+  if BS.length bs == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      debugStr $ "Received (" ++ show (BL.length bs') ++ " bytes)\t"
-      elem <- case parseFrame bs' of
+      debugStr $ "Received (" ++ show (BS.length bs) ++ " bytes)\t"
+      elem <- case decode bs of
         Left err -> do
           debugStrLn $ "failed to parse: " ++ err
-          return (Left bs')
+          return (Left bs)
         Right ef -> do
           debugStrLn $ showFrameInfo ef
           return (Right $ f ef)
@@ -140,8 +139,8 @@ outputWorker hnd f chn = forever $ do
     bs = case elem of
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
-  liftIO $ sendPacketBS hnd (BL.toStrict bs)
-  debugStrLn $ "Sent     (" ++ show (BL.length bs) ++ " bytes)"
+  liftIO $ sendPacketBS hnd bs
+  debugStrLn $ "Sent     (" ++ show (BS.length bs) ++ " bytes)"
 
 -- | Print a string only when debug mode is enabled in `Settings`.
 debugStr :: (MonadReader Settings m, MonadIO m) => String -> m ()
