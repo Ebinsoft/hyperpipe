@@ -19,8 +19,10 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -O2
     - -threaded
     - -rtsopts
+    - -fprof-auto
     - -with-rtsopts=-N
     dependencies:
     - hyperpipe
