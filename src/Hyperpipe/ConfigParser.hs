@@ -11,7 +11,8 @@ module Hyperpipe.ConfigParser
 
 import Control.Applicative ((<|>))
 import Data.Bifunctor (first)
-import Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy as B
+import Data.List ((\\), nub)
 import qualified Data.Map as M
 import Data.Maybe (catMaybes)
 import qualified Data.Text as T
@@ -30,16 +31,26 @@ instance FromYAML StateModel where
 -- file
 parseCfgData :: B.ByteString -> Either String StateModel
 parseCfgData cfg =
-  let prettyErr (p, e) = prettyPosWithSource p cfg " error" ++ e
-  in first prettyErr (decode1 cfg)
+  let prettyErr (p, e) = prettyPosWithSource p cfg "ERROR" ++ e
+  in first prettyErr (decode1 cfg) >>= verifyModel
 
 -- | Open a config file at the given path and attempt to construct a
 -- `StateModel` from its contents
 parseCfgFile :: FilePath -> IO (Either String StateModel)
 parseCfgFile path = do
   raw <- B.readFile path
-  let prettyErr (p, e) = path ++ ":" ++ prettyPosWithSource p raw " error" ++ e
-  return $ first prettyErr (decode1 raw)
+  let prependPath e = path ++ ":" ++ e
+  return $ first prependPath (parseCfgData raw)
+
+-- | Ensure each device is defined only once throughout config file
+verifyModel :: StateModel -> Either String StateModel
+verifyModel m@(StateModel es) =
+  let
+    unIface (IfaceName n) = n
+    devs = unIface . ifaceName <$> es
+  in case devs \\ nub devs of
+    []      -> Right m
+    (d : _) -> Left $ "ERROR multiple definitions for device \"" ++ d ++ "\""
 
 -- | Parse a list of interfaces as endpoints with a given direction, from a
 -- mapping where each key is the name of the interface, and the value is a
