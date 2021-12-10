@@ -15,20 +15,18 @@
 module Hyperpipe.StateMachine where
 
 import Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
-
 import Control.Concurrent.Chan.Unagi.Bounded
   (InChan, OutChan, readChan, writeChan)
-
 import Control.Monad (forever, when)
 import Control.Monad.Reader
   (MonadIO, MonadReader, ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
-import Data.Persist (encode, decode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Map.Strict (Map(..))
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
+import Data.Persist (decode, encode)
 import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 
 import Hyperpipe.EthFrame
@@ -132,7 +130,8 @@ inputWorker hnd f chn = forever $ do
 
 -- | Pull packet from channel, apply function, and write to network interface in
 -- an infinite loop
-outputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> OutChan Elem -> Worker ()
+outputWorker
+  :: PcapHandle -> (EthFrame -> EthFrame) -> OutChan Elem -> Worker ()
 outputWorker hnd f chn = forever $ do
   elem <- liftIO $ readChan chn
   let

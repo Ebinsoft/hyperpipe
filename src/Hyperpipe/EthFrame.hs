@@ -10,12 +10,13 @@
 
 module Hyperpipe.EthFrame where
 
-import Data.Persist (Persist(..), getByteString, putByteString, getBE, putBE, remaining)
 import Data.ByteString (ByteString(..))
 import qualified Data.ByteString as BS
 import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Maybe (isNothing)
+import Data.Persist
+  (Persist(..), getBE, getByteString, putBE, putByteString, remaining)
 import Data.Word (Word16)
 import Numeric (showHex)
 
