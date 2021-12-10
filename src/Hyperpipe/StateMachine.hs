@@ -77,7 +77,6 @@ createWorker ep = do
   liftIO $ maybe (pure ()) killThread (M.lookup (Key ep) wmap)
 
   -- create pcap handle for interface
-  debugStrLn $ "Creating worker for " ++ show (ifaceName ep)
   settings <- ask
   let (IfaceName name) = ifaceName ep
   timeout <- asks (fromIntegral . bufTimeout)
@@ -89,6 +88,7 @@ createWorker ep = do
       Output -> forever $ outputWorker hnd f outChn
 
   -- run thread for new worker
+  debugStrLn $ "Creating worker for " ++ name
   tid <- liftIO $ forkIO (runReaderT worker settings)
   put (inChn, outChn, M.insert (Key ep) tid wmap)
 
