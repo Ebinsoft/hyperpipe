@@ -40,7 +40,7 @@ options =
           <> short 't'
           <> metavar "INT"
           <> showDefault
-          <> value 1000
+          <> value 100000
           <> help
               "The packet buffer timeout for each capture device (in microseconds). \
               \See https://www.tcpdump.org/manpages/pcap.3pcap.html for an explanation of the packet buffer timeout."
