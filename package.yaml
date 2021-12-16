@@ -23,7 +23,7 @@ executables:
     - -threaded
     - -rtsopts
     - -fprof-auto
-    - -with-rtsopts=-N
+    - -with-rtsopts=-N1
     dependencies:
     - hyperpipe
     - optparse-applicative
