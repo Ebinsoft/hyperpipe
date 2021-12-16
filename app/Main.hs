@@ -1,5 +1,7 @@
+{-# LANGUAGE RecordWildCards #-}
 module Main where
 
+import Control.Applicative (optional)
 import Control.Concurrent.Chan.Unagi.Bounded (newChan)
 import Control.Monad (when)
 import Control.Monad.Reader (runReaderT)
@@ -7,7 +9,7 @@ import Control.Monad.State.Strict (evalStateT)
 import Data.Foldable (asum)
 import Data.List (find, isPrefixOf)
 import qualified Data.Map.Strict as M
-import GHC.Conc (getNumCapabilities)
+import GHC.Conc (setNumCapabilities)
 import Options.Applicative
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
@@ -16,10 +18,10 @@ import Text.Read (readMaybe)
 
 import Hyperpipe
 
--- | Data structure holding all possible command-line options for the program
 data Options = Options
   { optConfig   :: String
   , optDebug    :: Bool
+  , optThreads  :: Maybe Int
   , optTimeout  :: Int
   , optQueueLen :: Int
   }
@@ -34,10 +36,21 @@ options =
           <> help
               "When debug mode is active, each received packet is printed to stdout"
           )
+    <*> optional
+          (option
+            auto
+            (  long "threads"
+            <> short 't'
+            <> metavar "INT"
+            <> help
+                "Number of OS-level threads to deploy for the runtime system.  \
+                \By default hyperpipe will automatically create as many as it \
+                \needs without exceeding the number of physical CPU cores."
+            )
+          )
     <*> option
           auto
           (  long "timeout"
-          <> short 't'
           <> metavar "INT"
           <> showDefault
           <> value 100000
@@ -47,8 +60,7 @@ options =
           )
     <*> option
           auto
-          (  long "queue-size"
-          <> short 'q'
+          (  long "queue"
           <> metavar "INT"
           <> showDefault
           <> value 100
@@ -73,33 +85,47 @@ getNumCores = do
         return 0
       Just n -> return n
 
+-- | Ensure the user didn't give any bad values for the command-line options
+validateOpts :: Options -> IO Options
+validateOpts o@Options {..} = do
+  case optThreads of
+    Nothing -> return ()
+    Just t  -> when (t < 1) $ do
+      putStrLn $ "Invalid number of threads: " ++ show t
+      exitFailure
+
+  when (optTimeout < 0) $ do
+    putStrLn $ "Invalid packet buffer timeout: " ++ show optTimeout
+    exitFailure
+
+  when (optQueueLen < 1) $ do
+    putStrLn $ "Invalid queue length: " ++ show optQueueLen
+    exitFailure
+
+  return o
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
 
-  -- Warn user if more RTS threads than physical cores on system.
-  -- Because of the large amount of resource contention between the
-  -- worker threads, hyperthreading tends to really hurt performance.
-  ncores   <- getNumCores
-  nthreads <- getNumCapabilities
-  when (ncores > 0 && nthreads > ncores) $ putStrLn
-    (  "WARNING: number of runtime threads ("
-    ++ show nthreads
-    ++ ") exceeds the number of physical CPU cores ("
-    ++ show ncores
-    ++ ").  "
-    ++ "For best performance set '+RTS -N"
-    ++ show ncores
-    ++ " -RTS'"
-    )
-
-  opts <- execParser optInfo
+  opts <- execParser optInfo >>= validateOpts
   res  <- parseCfgFile (optConfig opts)
   case res of
     Left  err   -> putStrLn err >> exitFailure
     Right model -> do
       (inChn, outChn) <- newChan (optQueueLen opts)
+
+      -- set the number of runtime capabilities
+      ncores          <- getNumCores
+      case optThreads opts of
+        Just n -> do
+          when (n > ncores)
+            $ putStrLn
+                "WARNING: Number of threads exceeds the number of physical CPU \
+                \cores. This will likely hurt performance."
+          setNumCapabilities n
+        Nothing -> setNumCapabilities $ min ncores (1 + numEndpoints model)
+
       let
         settings =
           Settings { debugMode = optDebug opts, bufTimeout = optTimeout opts }
