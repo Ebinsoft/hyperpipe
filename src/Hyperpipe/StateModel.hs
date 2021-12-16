@@ -51,6 +51,10 @@ data Instruction
   | DisableEndpoint Endpoint
   deriving (Eq, Show)
 
+-- | Returns the number of `Endpoint`s included in the model
+numEndpoints :: StateModel -> Int
+numEndpoints (StateModel es) = length es
+
 -- | Generate the list of instructions needed to completely transition from one
 -- state to another
 stepsBetween :: StateModel -> StateModel -> [Instruction]
