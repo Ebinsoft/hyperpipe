@@ -1,24 +1,45 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Hyperpipe.Logger where
+{-# LANGUAGE RecordWildCards #-}
+module Hyperpipe.Logger
+  ( LogLevel(..)
+  , Logger
+  , HasLogger(..)
+  , makeLogger
+  , logWithLevel
+  , logDebug
+  , logInfo
+  , logWarn
+  , logError
+  ) where
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan.Unagi
   (InChan, OutChan, newChan, readChan, writeChan)
-import Control.Monad.Reader (MonadIO, MonadReader, ReaderT, ask, liftIO)
+import Control.Monad (when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
-type LogHandle = InChan LogMsg
+data Logger = Logger
+  { logChan  :: InChan LogMsg
+  , minLevel :: LogLevel
+  }
 
-data LogLevel = DEBUG | INFO | WARN | ERROR
+data LogLevel
+  = DEBUG
+  | INFO
+  | WARN
+  | ERROR
+  deriving (Eq, Ord)
+
 type LogMsg = (LogLevel, String)
 
-class (MonadReader LogHandle m, MonadIO m) => MonadLog m where
-type LogT = ReaderT LogHandle
+class (Monad m) => HasLogger m where
+  getLogger :: m Logger
 
-makeLogger :: IO LogHandle
-makeLogger = do
+makeLogger :: LogLevel -> IO Logger
+makeLogger lvl = do
   (inChn, outChn) <- newChan
-  forkIO $ logWorker outChn
-  return inChn
+  forkIO $ runLogWorker outChn
+  return $ Logger inChn lvl
 
 prefix :: LogLevel -> String
 prefix DEBUG = "[DEBUG] "
@@ -26,15 +47,27 @@ prefix INFO  = "[INFO]  "
 prefix WARN  = "[WARN]  "
 prefix ERROR = "[ERROR] "
 
-logWorker :: OutChan LogMsg -> IO ()
-logWorker chn = loop
+runLogWorker :: OutChan LogMsg -> IO ()
+runLogWorker chn = loop
  where
   loop = do
     (lvl, msg) <- readChan chn
     putStrLn $ prefix lvl ++ msg
     loop
 
-log :: (MonadLog m) => LogLevel -> String -> m ()
-log lvl msg = do
-  chn <- ask
-  liftIO $ writeChan chn (lvl, msg)
+logWithLevel :: (HasLogger m, MonadIO m) => LogLevel -> String -> m ()
+logWithLevel lvl msg = do
+  Logger {..} <- getLogger
+  when (lvl >= minLevel) (liftIO $ writeChan logChan (lvl, msg))
+
+logDebug :: (HasLogger m, MonadIO m) => String -> m ()
+logDebug = logWithLevel DEBUG
+
+logInfo :: (HasLogger m, MonadIO m) => String -> m ()
+logInfo = logWithLevel INFO
+
+logWarn :: (HasLogger m, MonadIO m) => String -> m ()
+logWarn = logWithLevel WARN
+
+logError :: (HasLogger m, MonadIO m) => String -> m ()
+logError = logWithLevel ERROR
