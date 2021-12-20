@@ -75,11 +75,10 @@ optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
 getNumCores :: IO Int
 getNumCores = do
   cpuinfo <- readFile "/proc/cpuinfo"
-  case find ("cpu cores" `isPrefixOf`) (lines cpuinfo) of
-    Nothing -> do
-      putStrLn "Unable to locate CPU core count in /proc/cpuinfo"
-      return 0
-    Just coreinfo -> case asum $ readMaybe <$> words coreinfo of
+  case
+      find ("cpu cores" `isPrefixOf`) (lines cpuinfo)
+        >>= (asum . (readMaybe <$>) . words)
+    of
       Nothing -> do
         putStrLn "Unable to locate CPU core count in /proc/cpuinfo"
         return 0
