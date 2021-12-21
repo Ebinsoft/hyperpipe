@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 -- | Module: StateMachine
 --
 -- This module contains the entrypoint for the program, and it is where most of
@@ -18,8 +18,7 @@ import Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
 import Control.Concurrent.Chan.Unagi.Bounded
   (InChan, OutChan, readChan, writeChan)
 import Control.Monad (forever, when)
-import Control.Monad.Reader
-  (MonadIO, MonadReader, ReaderT, ask, asks, lift, runReaderT)
+import Control.Monad.Reader (ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -30,6 +29,7 @@ import Data.Persist (decode, encode)
 import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 
 import Hyperpipe.EthFrame
+import Hyperpipe.Logger
 import Hyperpipe.StateModel
 
 -- | Custom newtype wrapper for using `Endpoint` as the key in an ordered `Map`
@@ -41,17 +41,21 @@ instance Ord Key where
   compare (Key e) (Key f) = comparing ifaceName e f
 
 type Elem = Either ByteString EthFrame
-type Env = (InChan Elem, OutChan Elem, Map Key ThreadId)
 
--- | Read-only configuration options for the `StateMachine` and all of its
--- `Worker` threads
-data Settings = Settings
-  { debugMode  :: Bool -- ^ when true, packet info is printed while running
-  , bufTimeout :: Int  -- ^ packet buffer timeout for pcap handles
+data Env = Env
+  { bufTimeout :: Int          -- ^ packet buffer timeout for pcap handles
+  , queueIn    :: InChan Elem  -- ^ input for the traffic queue
+  , queueOut   :: OutChan Elem -- ^ output for the traffic queue
+  , logger     :: Logger
   }
 
-type StateMachine a = ReaderT Settings (StateT Env IO) a
-type Worker a = ReaderT Settings IO a
+type WorkerMap = Map Key ThreadId
+
+type StateMachine = ReaderT Env (StateT WorkerMap IO)
+type Worker = ReaderT Env IO
+
+instance (Monad m) => HasLogger (ReaderT Env m) where
+  getLogger = asks logger
 
 -- | Bootstrap the `StateMachine` with a `StateModel` representing the target
 -- program configuration.
@@ -70,36 +74,36 @@ interpret (DisableEndpoint e) = destroyWorker e
 -- thread for the same interface already exists, kill it.
 createWorker :: Endpoint -> StateMachine ()
 createWorker ep = do
-  (inChn, outChn, wmap) <- get
+  wmap <- get
   -- kill existing thread if it exists
   liftIO $ maybe (pure ()) killThread (M.lookup (Key ep) wmap)
 
   -- create pcap handle for interface
-  settings <- ask
   let (IfaceName name) = ifaceName ep
   timeout <- asks (fromIntegral . bufTimeout)
   hnd     <- liftIO $ openLive name 65535 True timeout
   let f = runOps $ frameOps ep
   let
     worker = case trafficDir ep of
-      Input  -> inputWorker hnd f inChn
-      Output -> outputWorker hnd f outChn
+      Input  -> inputWorker hnd f
+      Output -> outputWorker hnd f
 
   -- run thread for new worker
-  debugStrLn $ "Creating worker for " ++ name
-  tid <- liftIO $ forkIO (runReaderT worker settings)
-  put (inChn, outChn, M.insert (Key ep) tid wmap)
+  logInfo $ "Spawning worker thread for " ++ name
+  env <- ask
+  tid <- liftIO $ forkIO (runReaderT worker env)
+  put $ M.insert (Key ep) tid wmap
 
 -- | Kill the thread transferring traffic to or from the given network interface
 -- (if it exists).
 destroyWorker :: Endpoint -> StateMachine ()
 destroyWorker ep = do
-  (inChn, outChn, wmap) <- get
+  wmap <- get
   case M.lookup (Key ep) wmap of
     Nothing  -> return ()
     Just tid -> do
       liftIO (killThread tid)
-      put (inChn, outChn, M.delete (Key ep) wmap)
+      put $ M.delete (Key ep) wmap
 
 -- | Convert a list of `FrameOp`s into a single function over `EthFrame`s doing
 -- all of the ops.
@@ -112,41 +116,32 @@ runOps (o : os) = runOps os . opToFunc o
 
 -- | Pull packet from interface handle, apply function, and put into channel in
 -- an infinite loop
-inputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> InChan Elem -> Worker ()
-inputWorker hnd f chn = forever $ do
+inputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+inputWorker hnd f = forever $ do
   (_, bs) <- liftIO $ nextBS hnd
   if BS.length bs == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      debugStr $ "Received (" ++ show (BS.length bs) ++ " bytes)\t"
+      logDebug $ "Received " ++ show (BS.length bs) ++ " bytes."
       elem <- case decode bs of
         Left err -> do
-          debugStrLn $ "failed to parse: " ++ err
+          logError $ "Failed to parse packet: " ++ err
           return (Left bs)
         Right ef -> do
-          debugStrLn $ showFrameInfo ef
           return (Right $ f ef)
+      chn <- asks queueIn
       liftIO $ writeChan chn elem
 
 -- | Pull packet from channel, apply function, and write to network interface in
 -- an infinite loop
-outputWorker
-  :: PcapHandle -> (EthFrame -> EthFrame) -> OutChan Elem -> Worker ()
-outputWorker hnd f chn = forever $ do
+outputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+outputWorker hnd f = forever $ do
+  chn  <- asks queueOut
   elem <- liftIO $ readChan chn
   let
     bs = case elem of
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd bs
-  debugStrLn $ "Sent     (" ++ show (BS.length bs) ++ " bytes)"
+  logDebug $ "Sent " ++ show (BS.length bs) ++ " bytes."
 
--- | Print a string only when debug mode is enabled in `Settings`.
-debugStr :: (MonadReader Settings m, MonadIO m) => String -> m ()
-debugStr s = do
-  isDebug <- asks debugMode
-  when isDebug (liftIO $ putStr s)
-
--- | Identical to `debugStr` but appends a newline to the end of the string.
-debugStrLn :: (MonadReader Settings m, MonadIO m) => String -> m ()
-debugStrLn s = debugStr $ s ++ "\n"
