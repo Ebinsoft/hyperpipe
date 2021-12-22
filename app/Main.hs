@@ -6,6 +6,7 @@ import Control.Concurrent.Chan.Unagi.Bounded (newChan)
 import Control.Monad (when)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State.Strict (evalStateT)
+import Data.Char (toLower)
 import Data.Foldable (asum)
 import Data.List (find, isPrefixOf)
 import qualified Data.Map.Strict as M
@@ -20,7 +21,7 @@ import Hyperpipe
 
 data Options = Options
   { optConfig   :: String
-  , optDebug    :: Bool
+  , optLogLevel :: LogLevel
   , optThreads  :: Maybe Int
   , optTimeout  :: Int
   , optQueueLen :: Int
@@ -30,11 +31,14 @@ options :: Parser Options
 options =
   Options
     <$> argument str (metavar "FILE" <> help "YAML configuration file")
-    <*> switch
-          (  long "debug"
-          <> short 'd'
-          <> help
-              "When debug mode is active, each received packet is printed to stdout"
+    <*> option
+          readLogLevel
+          (  long "log-level"
+          <> short 'l'
+          <> metavar "LEVEL"
+          <> showDefault
+          <> value INFO
+          <> help "Minimum severity level of log messages that are displayed."
           )
     <*> optional
           (option
@@ -67,6 +71,15 @@ options =
           <> help
               "Number of packets to hold in the internal queue between input and output interfaces."
           )
+
+readLogLevel :: ReadM LogLevel
+readLogLevel = str >>= \s -> case toLower <$> s of
+  "debug" -> return DEBUG
+  "info"  -> return INFO
+  "warn"  -> return WARN
+  "error" -> return ERROR
+  _ ->
+    readerError "Accepted log levels are 'debug', 'info', 'warn', and 'error'."
 
 optInfo :: ParserInfo Options
 optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
@@ -114,7 +127,7 @@ main = do
     Right model -> do
       (inChn, outChn) <- newChan (optQueueLen opts)
 
-      logHandle       <- makeLogger DEBUG
+      logHandle       <- makeLogger (optLogLevel opts)
       -- set the number of runtime capabilities
       ncores          <- getNumCores
       case optThreads opts of
