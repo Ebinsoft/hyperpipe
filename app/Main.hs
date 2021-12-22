@@ -114,21 +114,25 @@ main = do
     Right model -> do
       (inChn, outChn) <- newChan (optQueueLen opts)
 
+      logHandle       <- makeLogger DEBUG
       -- set the number of runtime capabilities
       ncores          <- getNumCores
       case optThreads opts of
         Just n -> do
           when (n > ncores)
-            $ putStrLn
-                "WARNING: Number of threads exceeds the number of physical CPU \
-                \cores. This will likely hurt performance."
+            $ withLogger logHandle
+            $ logWarn
+                "Number of threads exceeds the number of physical CPU cores. \
+                \This will likely hurt performance."
           setNumCapabilities n
         Nothing -> setNumCapabilities $ min ncores (1 + numEndpoints model)
 
       let
-        settings =
-          Settings { debugMode = optDebug opts, bufTimeout = optTimeout opts }
-      evalStateT
-        (runReaderT (runWithModel model) settings)
-        (inChn, outChn, M.empty)
+        env = Env
+          { bufTimeout = optTimeout opts
+          , queueIn    = inChn
+          , queueOut   = outChn
+          , logger     = logHandle
+          }
+      evalStateT (runReaderT (runWithModel model) env) M.empty
 
