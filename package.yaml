@@ -10,6 +10,7 @@ dependencies:
 - mtl
 - pcap
 - unagi-chan
+- time
 
 library:
   source-dirs: src
