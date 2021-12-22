@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Main where
 
 import Control.Applicative (optional)
@@ -42,7 +41,7 @@ options =
           )
     <*> optional
           (option
-            auto
+            readThreadCount
             (  long "threads"
             <> short 't'
             <> metavar "INT"
@@ -53,7 +52,7 @@ options =
             )
           )
     <*> option
-          auto
+          readTimeout
           (  long "timeout"
           <> metavar "INT"
           <> showDefault
@@ -63,7 +62,7 @@ options =
               \See https://www.tcpdump.org/manpages/pcap.3pcap.html for an explanation of the packet buffer timeout."
           )
     <*> option
-          auto
+          readQueueLen
           (  long "queue"
           <> metavar "INT"
           <> showDefault
@@ -81,6 +80,19 @@ readLogLevel = str >>= \s -> case toLower <$> s of
   _ ->
     readerError "Accepted log levels are 'debug', 'info', 'warn', and 'error'."
 
+readThreadCount :: ReadM Int
+readThreadCount = auto >>= \i ->
+  if i < 1 then readerError "Thread count must be positive." else return i
+
+readTimeout :: ReadM Int
+readTimeout = auto >>= \i -> if i < 0
+  then readerError "Packet buffer timeout cannot be negative."
+  else return i
+
+readQueueLen :: ReadM Int
+readQueueLen = auto >>= \i ->
+  if i < 1 then readerError "Queue length must be positive." else return i
+
 optInfo :: ParserInfo Options
 optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
 
@@ -97,30 +109,11 @@ getNumCores = do
         return 0
       Just n -> return n
 
--- | Ensure the user didn't give any bad values for the command-line options
-validateOpts :: Options -> IO Options
-validateOpts o@Options {..} = do
-  case optThreads of
-    Nothing -> return ()
-    Just t  -> when (t < 1) $ do
-      putStrLn $ "Invalid number of threads: " ++ show t
-      exitFailure
-
-  when (optTimeout < 0) $ do
-    putStrLn $ "Invalid packet buffer timeout: " ++ show optTimeout
-    exitFailure
-
-  when (optQueueLen < 1) $ do
-    putStrLn $ "Invalid queue length: " ++ show optQueueLen
-    exitFailure
-
-  return o
-
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
 
-  opts <- execParser optInfo >>= validateOpts
+  opts <- execParser optInfo
   res  <- parseCfgFile (optConfig opts)
   case res of
     Left  err   -> putStrLn err >> exitFailure
