@@ -30,7 +30,7 @@ data LogLevel
   | INFO
   | WARN
   | ERROR
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 type LogMsg = (LogLevel, String)
 
