@@ -1,9 +1,11 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Hyperpipe.Logger
   ( LogLevel(..)
   , Logger
   , HasLogger(..)
   , makeLogger
+  , withLogger
   , logWithLevel
   , logDebug
   , logInfo
@@ -15,6 +17,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan.Unagi
   (InChan, OutChan, newChan, readChan, writeChan)
 import Control.Monad (when)
+import Control.Monad.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 data Logger = Logger
@@ -33,6 +36,9 @@ type LogMsg = (LogLevel, String)
 
 class (Monad m) => HasLogger m where
   getLogger :: m Logger
+
+instance (Monad m) => HasLogger (ReaderT Logger m) where
+  getLogger = ask
 
 makeLogger :: LogLevel -> IO Logger
 makeLogger lvl = do
@@ -53,7 +59,10 @@ runLogWorker chn = loop
     (lvl, msg) <- readChan chn
     putStrLn $ prefix lvl ++ msg
     loop
-
+  
+withLogger :: Logger -> ReaderT Logger m () -> m ()
+withLogger l m = runReaderT m l
+  
 logWithLevel :: (HasLogger m, MonadIO m) => LogLevel -> String -> m ()
 logWithLevel lvl msg = do
   Logger {..} <- getLogger
