@@ -64,6 +64,7 @@ data EthFrame = EthFrame
   , srcMac       :: MACAddr       -- ^ source MAC address
   , ethType      :: EtherType     -- ^ EtherType of frame
   , frameVlan    :: Maybe VLANTag -- ^ VLAN tag of frame (if present)
+  , frameVlan2   :: Maybe VLANTag -- ^ 2nd VLAN tag of frame (if present and double tagged)
   , framePayload :: ByteString    -- ^ payload (remainder of frame after EthType)
   }
   deriving (Show, Eq)
@@ -74,6 +75,8 @@ instance Persist EthFrame where
     dst     <- get
     src     <- get
     et      <- get
+    vt2     <- if et == 0x88A8 then Just <$> get else return Nothing
+    et      <- if isNothing vt2 then return et else get
     vt      <- if et == 0x8100 then Just <$> get else return Nothing
     et      <- if isNothing vt then return et else get
     payload <- remaining >>= getByteString
@@ -82,12 +85,16 @@ instance Persist EthFrame where
       , srcMac       = src
       , ethType      = et
       , frameVlan    = vt
+      , frameVlan2   = vt2
       , framePayload = payload
       }
 
-  put (EthFrame dst src et vt payload) = do
+  put (EthFrame dst src et vt vt2 payload) = do
     put dst
     put src
+    case vt2 of
+      Nothing -> return()
+      Just vt2' -> putBE (0x88A8 :: Word16) >> put vt2'
     case vt of
       Nothing  -> return ()
       Just vt' -> putBE (0x8100 :: Word16) >> put vt'
