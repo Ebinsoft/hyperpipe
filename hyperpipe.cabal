@@ -1,0 +1,87 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.5.
+--
+-- see: https://github.com/sol/hpack
+
+name:           hyperpipe
+version:        0.0.0
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Hyperpipe
+      Hyperpipe.ConfigParser
+      Hyperpipe.EthFrame
+      Hyperpipe.Logger
+      Hyperpipe.StateMachine
+      Hyperpipe.StateModel
+  other-modules:
+      Paths_hyperpipe
+  hs-source-dirs:
+      src
+  build-depends:
+      HsYAML
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , mtl
+    , pcap
+    , persist
+    , text
+    , time
+    , unagi-chan
+  default-language: Haskell2010
+
+executable hyperpipe-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_hyperpipe
+  hs-source-dirs:
+      app
+  ghc-options: -O2 -threaded -rtsopts -fprof-auto -with-rtsopts=-N1
+  build-depends:
+      HsYAML
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , hyperpipe
+    , mtl
+    , optparse-applicative
+    , pcap
+    , persist
+    , text
+    , time
+    , unagi-chan
+  default-language: Haskell2010
+
+test-suite hyperpipe-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Hyperpipe.Tests.ConfigParser
+      Hyperpipe.Tests.EthFrame
+      Hyperpipe.Tests.StateModel
+      Paths_hyperpipe
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      HsYAML
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , hyperpipe
+    , mtl
+    , pcap
+    , persist
+    , string-interpolate
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
+    , time
+    , unagi-chan
+  default-language: Haskell2010

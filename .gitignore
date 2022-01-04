@@ -2,7 +2,6 @@
 dist/
 dist-newstyle/
 .vscode/
-*.cabal
 *~
 \#*\#
 .\#*
