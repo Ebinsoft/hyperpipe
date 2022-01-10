@@ -9,8 +9,10 @@ import Data.Char (toLower)
 import Data.Foldable (asum)
 import Data.List (find, isPrefixOf)
 import qualified Data.Map.Strict as M
+import Data.Version (showVersion)
 import GHC.Conc (setNumCapabilities)
 import Options.Applicative
+import Paths_hyperpipe (version)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO
@@ -25,6 +27,11 @@ data Options = Options
   , optTimeout  :: Int
   , optQueueLen :: Int
   }
+
+versionOpt :: Parser (a -> a)
+versionOpt = infoOption
+  (showVersion version)
+  (long "version" <> help "Show version number")
 
 options :: Parser Options
 options =
@@ -94,7 +101,8 @@ readQueueLen = auto >>= \i ->
   if i < 1 then readerError "Queue length must be positive." else return i
 
 optInfo :: ParserInfo Options
-optInfo = info (options <**> helper) (fullDesc <> header "HYPERPIPE :D")
+optInfo =
+  info (helper <*> versionOpt <*> options) (fullDesc <> header "HYPERPIPE")
 
 -- | Parse @/proc/cpuinfo@ for the number of physical CPU cores on the system
 getNumCores :: IO Int
