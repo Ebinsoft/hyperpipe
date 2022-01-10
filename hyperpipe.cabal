@@ -35,7 +35,7 @@ library
     , unagi-chan
   default-language: Haskell2010
 
-executable hyperpipe-exe
+executable hyperpipe
   main-is: Main.hs
   other-modules:
       Paths_hyperpipe
