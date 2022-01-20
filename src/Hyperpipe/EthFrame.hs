@@ -50,13 +50,21 @@ instance Persist EtherType where
   put (EtherType e) = putBE e
 
 -- | 2-byte VLAN tag
-newtype VLANTag = VLANTag Word16
+data VLANTag = VLANTag
+  { tpid :: Word16
+  , vlan :: Word16
+  }
   deriving (Show, Eq)
 
 -- | A simple Binary instance to get/put a Word16 in big endian, like EtherType
 instance Persist VLANTag where
-  get = VLANTag <$> getBE
-  put (VLANTag vt) = putBE vt
+  get = do
+    tpid <- getBE
+    vlan <- getBE
+    return (VLANTag tpid vlan)
+  put (VLANTag tpid vlan) = do
+    putBE tpid
+    putBE vlan
 
 -- | The ethernet frame structure,
 data EthFrame = EthFrame
@@ -90,7 +98,7 @@ instance Persist EthFrame where
     put src
     case vt of
       Nothing  -> return ()
-      Just vt' -> putBE (0x8100 :: Word16) >> put vt'
+      Just vt' -> put vt'
     put et
     putByteString payload
 
@@ -109,7 +117,7 @@ showFrameInfo ef =
     src = show $ srcMac ef
     dst = show $ dstMac ef
     vlanInfo =
-      maybe "" (\(VLANTag vt) -> "vlan: " ++ show vt ++ ", ") (frameVlan ef)
+      maybe "" (\(VLANTag _ vt) -> "vlan: " ++ show vt ++ ", ") (frameVlan ef)
     EtherType et = ethType ef
     typeInfo     = "type: " ++ show et
   in src ++ " --> " ++ dst ++ " (" ++ vlanInfo ++ typeInfo ++ ")"
