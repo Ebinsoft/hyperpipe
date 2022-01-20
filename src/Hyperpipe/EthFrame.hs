@@ -77,7 +77,7 @@ data EthFrame = EthFrame
   { dstMac       :: MACAddr    -- ^ destination MAC address
   , srcMac       :: MACAddr    -- ^ source MAC address
   , ethType      :: EtherType  -- ^ EtherType of frame
-  , vlanTags     :: [VLANTag]  -- ^ VLAN tag of frame (if present)
+  , vlanTags     :: [VLANTag]  -- ^ List of VLAN tags for the given frame
   , framePayload :: ByteString -- ^ payload (remainder of frame after EthType)
   }
   deriving (Show, Eq)
@@ -105,10 +105,10 @@ instance Serialize EthFrame where
     put et
     putByteString payload
 
--- | Assigns a given VLAN tag to a frame (overwriting any existing tag)
+-- | Prepends a given VLAN tag to the list of tags currently on the frame
 addVlan :: VLANTag -> EthFrame -> EthFrame
 addVlan vlan ef = ef { vlanTags = vlan : vlanTags ef }
 
--- | Removes any VLAN tag from the frame
+-- | Removes all VLAN tags from the frame
 stripVlan :: EthFrame -> EthFrame
 stripVlan ef = ef { vlanTags = [] }
