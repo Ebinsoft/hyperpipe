@@ -39,12 +39,12 @@ validCfgModel = StateModel
   [ Endpoint
     { ifaceName  = IfaceName "eno1"
     , trafficDir = Input
-    , frameOps   = [SetVLAN (VLANTag 0x8100 171)]
+    , frameOps   = [AddVLAN (VLANTag 0x8100 171)]
     }
   , Endpoint
     { ifaceName  = IfaceName "eno2"
     , trafficDir = Input
-    , frameOps   = [SetVLAN (VLANTag 0x8100 69)]
+    , frameOps   = [AddVLAN (VLANTag 0x8100 69)]
     }
   , Endpoint
     { ifaceName  = IfaceName "eno3"

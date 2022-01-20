@@ -12,7 +12,7 @@ instance Arbitrary FlowDir where
   arbitrary = oneof $ return <$> [Input, Output]
 
 instance Arbitrary FrameOp where
-  arbitrary = oneof [SetVLAN <$> arbitrary, return StripVLAN]
+  arbitrary = oneof [AddVLAN <$> arbitrary, return StripVLAN]
 
 instance Arbitrary IfaceName where
   arbitrary = IfaceName <$> arbitrary

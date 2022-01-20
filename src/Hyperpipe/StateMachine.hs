@@ -111,7 +111,7 @@ runOps :: [FrameOp] -> (EthFrame -> EthFrame)
 runOps []       = id
 runOps (o : os) = runOps os . opToFunc o
  where
-  opToFunc (SetVLAN vt) = setVlan vt
+  opToFunc (AddVLAN vt) = addVlan vt
   opToFunc StripVLAN    = stripVlan
 
 -- | Pull packet from interface handle, apply function, and put into channel in

@@ -82,5 +82,5 @@ parseVLANOp m = case parseEither (m .: "vlan" :: Parser (Node Pos)) of
   Right n -> withNull "null" stripV n <|> withInt "VLAN tag" setV n
  where
   stripV = return (Just StripVLAN)
-  setV i = return (Just (SetVLAN (VLANTag 0x8100 $ fromIntegral i)))
+  setV i = return (Just (AddVLAN (VLANTag 0x8100 $ fromIntegral i)))
 
