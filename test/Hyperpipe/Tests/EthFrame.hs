@@ -30,7 +30,6 @@ instance Arbitrary EthFrame where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
 tests :: TestTree
 tests = testGroup
