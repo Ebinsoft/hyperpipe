@@ -29,7 +29,7 @@ library
     , containers
     , mtl
     , pcap
-    , persist
+    , cereal
     , text
     , time
     , unagi-chan
@@ -51,7 +51,7 @@ executable hyperpipe
     , mtl
     , optparse-applicative
     , pcap
-    , persist
+    , cereal
     , text
     , time
     , unagi-chan
@@ -76,7 +76,7 @@ test-suite hyperpipe-test
     , hyperpipe
     , mtl
     , pcap
-    , persist
+    , cereal
     , string-interpolate
     , tasty
     , tasty-hunit

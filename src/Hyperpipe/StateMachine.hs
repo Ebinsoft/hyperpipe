@@ -25,7 +25,7 @@ import qualified Data.ByteString as BS
 import Data.Map.Strict (Map(..))
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
-import Data.Persist (decode, encode)
+import Data.Serialize (decode, encode)
 import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 
 import Hyperpipe.EthFrame

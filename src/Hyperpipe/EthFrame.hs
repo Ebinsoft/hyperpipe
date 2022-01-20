@@ -15,8 +15,9 @@ import qualified Data.ByteString as BS
 import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Maybe (isNothing)
-import Data.Persist
-  (Persist(..), getBE, getByteString, putBE, putByteString, remaining)
+import Data.Serialize (Serialize(..), getByteString, putByteString, remaining)
+import Data.Serialize.Get (getWord16be)
+import Data.Serialize.Put (putWord16be)
 import Data.Word (Word16)
 import Numeric (showHex)
 
@@ -33,7 +34,7 @@ instance Show MACAddr where
       in if length hex == 1 then '0' : hex else hex
 
 -- | Custom Binary instance to put/get 6 bytes
-instance Persist MACAddr where
+instance Serialize MACAddr where
   get = do
     m <- getByteString 6
     return $ MACAddr m
@@ -45,9 +46,9 @@ newtype EtherType = EtherType Word16
   deriving (Show, Eq, Num)
 
 -- | Simple Binary instance to get/put a Word16 in big endian
-instance Persist EtherType where
-  get = EtherType <$> getBE
-  put (EtherType e) = putBE e
+instance Serialize EtherType where
+  get = EtherType <$> getWord16be
+  put (EtherType e) = putWord16be e
 
 -- | 2-byte VLAN tag
 data VLANTag = VLANTag
@@ -57,14 +58,14 @@ data VLANTag = VLANTag
   deriving (Show, Eq)
 
 -- | A simple Binary instance to get/put a Word16 in big endian, like EtherType
-instance Persist VLANTag where
+instance Serialize VLANTag where
   get = do
-    tpid <- getBE
-    vlan <- getBE
+    tpid <- getWord16be
+    vlan <- getWord16be
     return (VLANTag tpid vlan)
   put (VLANTag tpid vlan) = do
-    putBE tpid
-    putBE vlan
+    putWord16be tpid
+    putWord16be vlan
 
 -- | The ethernet frame structure,
 data EthFrame = EthFrame
@@ -77,7 +78,7 @@ data EthFrame = EthFrame
   deriving (Show, Eq)
 
 -- | Binary instance to get/put an EthFrame
-instance Persist EthFrame where
+instance Serialize EthFrame where
   get = do
     dst     <- get
     src     <- get
