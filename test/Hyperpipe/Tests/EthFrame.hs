@@ -20,7 +20,10 @@ instance Arbitrary EtherType where
   arbitrary = EtherType <$> arbitrary
 
 instance Arbitrary VLANTag where
-  arbitrary = VLANTag <$> arbitrary <*> arbitrary
+  arbitrary = do
+    tpid <- elements validTPIDs
+    vlan <- arbitrary
+    return $ VLANTag tpid vlan
 
 instance Arbitrary EthFrame where
   arbitrary =
