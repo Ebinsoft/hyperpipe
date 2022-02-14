@@ -25,7 +25,7 @@ import qualified Data.ByteString as BS
 import Data.Map.Strict (Map(..))
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
-import Data.Persist (decode, encode)
+import Data.Serialize (decode, encode)
 import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 
 import Hyperpipe.EthFrame
@@ -111,7 +111,7 @@ runOps :: [FrameOp] -> (EthFrame -> EthFrame)
 runOps []       = id
 runOps (o : os) = runOps os . opToFunc o
  where
-  opToFunc (SetVLAN vt) = setVlan vt
+  opToFunc (AddVLAN vt) = addVlan vt
   opToFunc StripVLAN    = stripVlan
 
 -- | Pull packet from interface handle, apply function, and put into channel in

@@ -4,7 +4,7 @@ import Control.Monad (replicateM)
 import Data.ByteString (ByteString(..))
 import qualified Data.ByteString as BS
 import Data.Either (isLeft)
-import Data.Persist (decode, encode)
+import Data.Serialize (decode, encode)
 import Data.Word (Word8)
 import Hyperpipe
 import Test.Tasty
@@ -20,13 +20,15 @@ instance Arbitrary EtherType where
   arbitrary = EtherType <$> arbitrary
 
 instance Arbitrary VLANTag where
-  arbitrary = VLANTag <$> arbitrary
+  arbitrary = do
+    tpid <- elements validTPIDs
+    vlan <- arbitrary
+    return $ VLANTag tpid vlan
 
 instance Arbitrary EthFrame where
   arbitrary =
     EthFrame
       <$> arbitrary
-      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

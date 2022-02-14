@@ -23,7 +23,7 @@ data FlowDir = Input | Output
 -- supports adding or removing VLAN tags, but could eventually include filtering
 -- and other transformations)
 data FrameOp
-  = SetVLAN VLANTag
+  = AddVLAN VLANTag
   | StripVLAN
   deriving (Eq, Show)
 

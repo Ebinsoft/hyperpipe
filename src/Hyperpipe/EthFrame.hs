@@ -10,15 +10,20 @@
 
 module Hyperpipe.EthFrame where
 
+import Control.Applicative (many)
+import Control.Monad (forM_, unless)
 import Data.ByteString (ByteString(..))
 import qualified Data.ByteString as BS
 import Data.Char (toUpper)
 import Data.List (intercalate)
 import Data.Maybe (isNothing)
-import Data.Persist
-  (Persist(..), getBE, getByteString, putBE, putByteString, remaining)
+import Data.Serialize (Serialize(..), getByteString, putByteString, remaining)
+import Data.Serialize.Get (getWord16be)
+import Data.Serialize.Put (putWord16be)
 import Data.Word (Word16)
 import Numeric (showHex)
+
+validTPIDs = [0x8100, 0x88a8]
 
 -- | MAC Address
 newtype MACAddr = MACAddr ByteString
@@ -33,7 +38,7 @@ instance Show MACAddr where
       in if length hex == 1 then '0' : hex else hex
 
 -- | Custom Binary instance to put/get 6 bytes
-instance Persist MACAddr where
+instance Serialize MACAddr where
   get = do
     m <- getByteString 6
     return $ MACAddr m
@@ -45,78 +50,65 @@ newtype EtherType = EtherType Word16
   deriving (Show, Eq, Num)
 
 -- | Simple Binary instance to get/put a Word16 in big endian
-instance Persist EtherType where
-  get = EtherType <$> getBE
-  put (EtherType e) = putBE e
+instance Serialize EtherType where
+  get = EtherType <$> getWord16be
+  put (EtherType e) = putWord16be e
 
 -- | 2-byte VLAN tag
-newtype VLANTag = VLANTag Word16
+data VLANTag = VLANTag
+  { tpid :: Word16
+  , vlan :: Word16
+  }
   deriving (Show, Eq)
 
 -- | A simple Binary instance to get/put a Word16 in big endian, like EtherType
-instance Persist VLANTag where
-  get = VLANTag <$> getBE
-  put (VLANTag vt) = putBE vt
+instance Serialize VLANTag where
+  get = do
+    tpid <- getWord16be
+    unless (tpid `elem` validTPIDs) (fail "Invalid TPID")
+    vlan <- getWord16be
+    return (VLANTag tpid vlan)
+  put (VLANTag tpid vlan) = do
+    putWord16be tpid
+    putWord16be vlan
 
 -- | The ethernet frame structure,
 data EthFrame = EthFrame
-  { dstMac       :: MACAddr       -- ^ destination MAC address
-  , srcMac       :: MACAddr       -- ^ source MAC address
-  , ethType      :: EtherType     -- ^ EtherType of frame
-  , frameVlan    :: Maybe VLANTag -- ^ VLAN tag of frame (if present)
-  , frameVlan2   :: Maybe VLANTag -- ^ 2nd VLAN tag of frame (if present and double tagged)
-  , framePayload :: ByteString    -- ^ payload (remainder of frame after EthType)
+  { dstMac       :: MACAddr    -- ^ destination MAC address
+  , srcMac       :: MACAddr    -- ^ source MAC address
+  , ethType      :: EtherType  -- ^ EtherType of frame
+  , vlanTags     :: [VLANTag]  -- ^ List of VLAN tags for the given frame
+  , framePayload :: ByteString -- ^ payload (remainder of frame after EthType)
   }
   deriving (Show, Eq)
 
 -- | Binary instance to get/put an EthFrame
-instance Persist EthFrame where
+instance Serialize EthFrame where
   get = do
     dst     <- get
     src     <- get
+    vt      <- many get
     et      <- get
-    vt2     <- if et == 0x88A8 then Just <$> get else return Nothing
-    et      <- if isNothing vt2 then return et else get
-    vt      <- if et == 0x8100 then Just <$> get else return Nothing
-    et      <- if isNothing vt then return et else get
     payload <- remaining >>= getByteString
     return $ EthFrame
       { dstMac       = dst
       , srcMac       = src
       , ethType      = et
-      , frameVlan    = vt
-      , frameVlan2   = vt2
+      , vlanTags     = vt
       , framePayload = payload
       }
 
-  put (EthFrame dst src et vt vt2 payload) = do
+  put (EthFrame dst src et vt payload) = do
     put dst
     put src
-    case vt2 of
-      Nothing -> return()
-      Just vt2' -> putBE (0x88A8 :: Word16) >> put vt2'
-    case vt of
-      Nothing  -> return ()
-      Just vt' -> putBE (0x8100 :: Word16) >> put vt'
+    forM_ vt put
     put et
     putByteString payload
 
--- | Assigns a given VLAN tag to a frame (overwriting any existing tag)
-setVlan :: VLANTag -> EthFrame -> EthFrame
-setVlan vlan ef = ef { frameVlan = Just vlan }
+-- | Prepends a given VLAN tag to the list of tags currently on the frame
+addVlan :: VLANTag -> EthFrame -> EthFrame
+addVlan vlan ef = ef { vlanTags = vlan : vlanTags ef }
 
--- | Removes any VLAN tag from the frame
+-- | Removes all VLAN tags from the frame
 stripVlan :: EthFrame -> EthFrame
-stripVlan ef = ef { frameVlan = Nothing }
-
--- | Pretty-print frame header information
-showFrameInfo :: EthFrame -> String
-showFrameInfo ef =
-  let
-    src = show $ srcMac ef
-    dst = show $ dstMac ef
-    vlanInfo =
-      maybe "" (\(VLANTag vt) -> "vlan: " ++ show vt ++ ", ") (frameVlan ef)
-    EtherType et = ethType ef
-    typeInfo     = "type: " ++ show et
-  in src ++ " --> " ++ dst ++ " (" ++ vlanInfo ++ typeInfo ++ ")"
+stripVlan ef = ef { vlanTags = [] }

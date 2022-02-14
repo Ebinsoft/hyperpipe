@@ -4,6 +4,7 @@ module Hyperpipe.Tests.StateModel where
 import Data.List (sort)
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Hyperpipe.Tests.EthFrame
 
 import Hyperpipe
 
@@ -11,7 +12,7 @@ instance Arbitrary FlowDir where
   arbitrary = oneof $ return <$> [Input, Output]
 
 instance Arbitrary FrameOp where
-  arbitrary = oneof [SetVLAN . VLANTag <$> arbitrary, return StripVLAN]
+  arbitrary = oneof [AddVLAN <$> arbitrary, return StripVLAN]
 
 instance Arbitrary IfaceName where
   arbitrary = IfaceName <$> arbitrary
