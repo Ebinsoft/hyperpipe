@@ -40,7 +40,6 @@ executables:
     - -fprof-auto
     - -with-rtsopts=-N1
     dependencies:
-    - grpc-haskell
     - brick
 
 tests:

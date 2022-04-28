@@ -71,7 +71,6 @@ executable hypertop
     , bytestring
     , cereal
     , containers
-    , grpc-haskell
     , mtl
     , pcap
     , text
