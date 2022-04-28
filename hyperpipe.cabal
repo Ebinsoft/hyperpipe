@@ -26,32 +26,54 @@ library
       HsYAML
     , base >=4.7 && <5
     , bytestring
+    , cereal
     , containers
     , mtl
     , pcap
-    , cereal
     , text
     , time
     , unagi-chan
   default-language: Haskell2010
 
-executable hyperpipe
+executable hyperpipe-daemon
   main-is: Main.hs
   other-modules:
       Paths_hyperpipe
   hs-source-dirs:
-      app
+      hyperpipe-daemon
   ghc-options: -O2 -threaded -rtsopts -fprof-auto -with-rtsopts=-N1
   build-depends:
       HsYAML
     , base >=4.7 && <5
     , bytestring
+    , cereal
     , containers
     , hyperpipe
     , mtl
     , optparse-applicative
     , pcap
+    , text
+    , time
+    , unagi-chan
+  default-language: Haskell2010
+
+executable hypertop
+  main-is: Main.hs
+  other-modules:
+      Paths_hyperpipe
+  hs-source-dirs:
+      hypertop
+  ghc-options: -O2 -threaded -rtsopts -fprof-auto -with-rtsopts=-N1
+  build-depends:
+      HsYAML
+    , base >=4.7 && <5
+    , brick
+    , bytestring
     , cereal
+    , containers
+    , grpc-haskell
+    , mtl
+    , pcap
     , text
     , time
     , unagi-chan
@@ -72,11 +94,11 @@ test-suite hyperpipe-test
       HsYAML
     , base >=4.7 && <5
     , bytestring
+    , cereal
     , containers
     , hyperpipe
     , mtl
     , pcap
-    , cereal
     , string-interpolate
     , tasty
     , tasty-hunit
