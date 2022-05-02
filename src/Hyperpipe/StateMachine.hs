@@ -17,6 +17,7 @@ module Hyperpipe.StateMachine where
 import Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
 import Control.Concurrent.Chan.Unagi.Bounded
   (InChan, OutChan, readChan, writeChan)
+import Control.Concurrent.MVar (readMVar)
 import Control.Monad (forever, when)
 import Control.Monad.Reader (ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
@@ -31,6 +32,7 @@ import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 import Hyperpipe.EthFrame
 import Hyperpipe.Logger
 import Hyperpipe.StateModel
+import Hyperpipe.ThroughputTracker
 
 -- | Custom newtype wrapper for using `Endpoint` as the key in an ordered `Map`
 -- (orders by interface name).
@@ -62,8 +64,15 @@ instance (Monad m) => HasLogger (ReaderT Env m) where
 runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
   let instructions = stepsBetween (StateModel []) model
-  mapM_ interpret instructions
-  forever $ liftIO (threadDelay 100000000)
+  mapM_ interpret instructions -- spins off worker threads
+
+  -- print throughput every second in a loop
+  forever $ do
+    tpTracker <- asks (tptVar . logger)
+    stuff     <- liftIO $ readMVar tpTracker >>= getThroughput
+    liftIO $ print stuff
+    liftIO $ threadDelay 1000000
+
 
 -- | Execute an `Instruction` as an effect in our `StateMachine`
 interpret :: Instruction -> StateMachine ()
@@ -85,8 +94,8 @@ createWorker ep = do
   let f = runOps $ frameOps ep
   let
     worker = case trafficDir ep of
-      Input  -> inputWorker hnd f
-      Output -> outputWorker hnd f
+      Input  -> inputWorker name hnd f
+      Output -> outputWorker name hnd f
 
   -- run thread for new worker
   logInfo $ "Spawning worker thread for " ++ name
@@ -116,13 +125,14 @@ runOps (o : os) = runOps os . opToFunc o
 
 -- | Pull packet from interface handle, apply function, and put into channel in
 -- an infinite loop
-inputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
-inputWorker hnd f = forever $ do
+inputWorker :: String -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+inputWorker iface hnd f = forever $ do
   (_, bs) <- liftIO $ nextBS hnd
   if BS.length bs == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      logDebug $ "Received " ++ show (BS.length bs) ++ " bytes."
+      -- logDebug $ "Received " ++ show (BS.length bs) ++ " bytes."
+      logMetric iface (BS.length bs)
       elem <- case decode bs of
         Left err -> do
           logError $ "Failed to parse packet: " ++ err
@@ -134,8 +144,8 @@ inputWorker hnd f = forever $ do
 
 -- | Pull packet from channel, apply function, and write to network interface in
 -- an infinite loop
-outputWorker :: PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
-outputWorker hnd f = forever $ do
+outputWorker :: String -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+outputWorker iface hnd f = forever $ do
   chn  <- asks queueOut
   elem <- liftIO $ readChan chn
   let
@@ -143,5 +153,6 @@ outputWorker hnd f = forever $ do
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd bs
-  logDebug $ "Sent " ++ show (BS.length bs) ++ " bytes."
+  logMetric iface (BS.length bs)
+  --logDebug $ "Sent " ++ show (BS.length bs) ++ " bytes."
 
