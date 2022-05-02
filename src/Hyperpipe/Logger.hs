@@ -13,7 +13,7 @@
 -- can be logged asynchronously.
 module Hyperpipe.Logger
   ( LogLevel(..)
-  , Logger
+  , Logger(..)
   , HasLogger(..)
   , makeLogger
   , withLogger
@@ -22,6 +22,7 @@ module Hyperpipe.Logger
   , logInfo
   , logWarn
   , logError
+  , logMetric
   ) where
 
 import Control.Concurrent (forkIO)
@@ -43,7 +44,7 @@ import Hyperpipe.ThroughputTracker
 data Logger = Logger
   { logChan  :: InChan LogItem
   , minLevel :: LogLevel
-  , tput     :: MVar ThroughputTracker
+  , tptVar   :: MVar ThroughputTracker
   }
 
 -- | Urgency level for a log message, ordered from lowest to highest priority.
@@ -127,10 +128,10 @@ logWarn = logWithLevel WARN
 logError :: (HasLogger m, MonadIO m) => String -> m ()
 logError = logWithLevel ERROR
 
- 
+
 logMetric :: (HasLogger m, MonadIO m) => String -> Int -> m ()
 logMetric iface size = do
   Logger {..} <- getLogger
   time        <- liftIO getCurrentTime
   liftIO $ writeChan logChan $ LogMetric iface time size
-  
+
