@@ -37,14 +37,14 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Text.Printf (PrintfArg(..), printf)
 
-import Hyperpipe.ThroughputTracker
+import Hyperpipe.UsageMonitor
 
 -- | Type representing the connection to a logging worker thread, with which log
 -- messages can be written.
 data Logger = Logger
-  { logChan  :: InChan LogItem
-  , minLevel :: LogLevel
-  , tptVar   :: MVar ThroughputTracker
+  { logChan    :: InChan LogItem
+  , minLevel   :: LogLevel
+  , monitorVar :: MVar UsageMonitor
   }
 
 -- | Urgency level for a log message, ordered from lowest to highest priority.
@@ -84,8 +84,8 @@ makeLogger lvl = do
 
 -- | Reads a message from the queue, formats it, and prints to stdout in an
 -- infinite loop.
-runLogWorker :: OutChan LogItem -> MVar ThroughputTracker -> IO ()
-runLogWorker chn tputVar = loop
+runLogWorker :: OutChan LogItem -> MVar UsageMonitor -> IO ()
+runLogWorker chn monVar = loop
  where
   loop = do
     item <- readChan chn
@@ -96,9 +96,9 @@ runLogWorker chn tputVar = loop
         putStrLn log
 
       LogMetric iface time size -> do
-        tput  <- takeMVar tputVar
+        tput  <- takeMVar monVar
         tput' <- addMetric tput iface (time, size)
-        putMVar tputVar tput'
+        putMVar monVar tput'
     loop
 
 -- | Helper function for logging messages outside of a `HasLogger` monad.

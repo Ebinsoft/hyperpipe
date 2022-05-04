@@ -32,7 +32,7 @@ import Network.Pcap (PcapHandle, nextBS, openLive, sendPacketBS)
 import Hyperpipe.EthFrame
 import Hyperpipe.Logger
 import Hyperpipe.StateModel
-import Hyperpipe.ThroughputTracker
+import Hyperpipe.UsageMonitor
 
 -- | Custom newtype wrapper for using `Endpoint` as the key in an ordered `Map`
 -- (orders by interface name).
@@ -68,8 +68,8 @@ runWithModel model = do
 
   -- print throughput every second in a loop
   forever $ do
-    tpTracker <- asks (tptVar . logger)
-    stuff     <- liftIO $ readMVar tpTracker >>= getThroughput
+    monitor <- asks (monitorVar . logger)
+    stuff   <- liftIO $ readMVar monitor >>= getThroughput
     liftIO $ print stuff
     liftIO $ threadDelay 1000000
 
@@ -131,7 +131,6 @@ inputWorker iface hnd f = forever $ do
   if BS.length bs == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      -- logDebug $ "Received " ++ show (BS.length bs) ++ " bytes."
       logMetric iface (BS.length bs)
       elem <- case decode bs of
         Left err -> do
@@ -154,5 +153,4 @@ outputWorker iface hnd f = forever $ do
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd bs
   logMetric iface (BS.length bs)
-  --logDebug $ "Sent " ++ show (BS.length bs) ++ " bytes."
 
