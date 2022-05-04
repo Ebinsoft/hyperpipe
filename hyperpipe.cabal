@@ -18,6 +18,7 @@ library
       Hyperpipe.Logger
       Hyperpipe.StateMachine
       Hyperpipe.StateModel
+      Hyperpipe.UsageMonitor
   other-modules:
       Paths_hyperpipe
   hs-source-dirs:
