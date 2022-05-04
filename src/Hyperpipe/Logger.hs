@@ -22,7 +22,7 @@ module Hyperpipe.Logger
   , logInfo
   , logWarn
   , logError
-  , logMetric
+  , logPktSize
   ) where
 
 import Control.Concurrent (forkIO)
@@ -38,6 +38,7 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Text.Printf (PrintfArg(..), printf)
 
 import Hyperpipe.UsageMonitor
+import Hyperpipe.StateModel
 
 -- | Type representing the connection to a logging worker thread, with which log
 -- messages can be written.
@@ -61,10 +62,9 @@ instance PrintfArg LogLevel where
   formatArg WARN  = formatArg "\x1b[33mWARN \x1b[0m"
   formatArg ERROR = formatArg "\x1b[31mERROR\x1b[0m"
 
--- | Alias for tuple of all data associated with a log message.
--- type LogMsg = (UTCTime, LogLevel, String)
-data LogItem = LogMsg UTCTime LogLevel String
-             | LogMetric String UTCTime Int
+-- | Kinds of information that can be passed through the logging channel.
+data LogItem = LogMsg UTCTime LogLevel String  -- ^ A message string with associated urgency level
+             | LogMetric UTCTime IfaceName Int
 
 -- | mtl-style typeclass which gives a monad the ability to send log messages.
 class (Monad m) => HasLogger m where
@@ -95,10 +95,10 @@ runLogWorker chn monVar = loop
         let log   = printf "[%s] %s | %s" timeS lvl msg
         putStrLn log
 
-      LogMetric iface time size -> do
-        tput  <- takeMVar monVar
-        tput' <- addMetric tput iface (time, size)
-        putMVar monVar tput'
+      LogMetric time iface size -> do
+        monitor  <- takeMVar monVar
+        monitor' <- addMetric monitor iface (time, size)
+        putMVar monVar monitor'
     loop
 
 -- | Helper function for logging messages outside of a `HasLogger` monad.
@@ -116,7 +116,7 @@ logWithLevel lvl msg = do
 logDebug :: (HasLogger m, MonadIO m) => String -> m ()
 logDebug = logWithLevel DEBUG
 
--- | Send a `INFO`-level log message.
+-- | Send an `INFO`-level log message.
 logInfo :: (HasLogger m, MonadIO m) => String -> m ()
 logInfo = logWithLevel INFO
 
@@ -124,14 +124,14 @@ logInfo = logWithLevel INFO
 logWarn :: (HasLogger m, MonadIO m) => String -> m ()
 logWarn = logWithLevel WARN
 
--- | Send a `ERROR`-level log message.
+-- | Send an `ERROR`-level log message.
 logError :: (HasLogger m, MonadIO m) => String -> m ()
 logError = logWithLevel ERROR
 
-
-logMetric :: (HasLogger m, MonadIO m) => String -> Int -> m ()
-logMetric iface size = do
+-- | Record the size of a packet observed on a given interface.
+logPktSize :: (HasLogger m, MonadIO m) => IfaceName -> Int -> m ()
+logPktSize iface size = do
   Logger {..} <- getLogger
   time        <- liftIO getCurrentTime
-  liftIO $ writeChan logChan $ LogMetric iface time size
+  liftIO $ writeChan logChan $ LogMetric time iface size
 

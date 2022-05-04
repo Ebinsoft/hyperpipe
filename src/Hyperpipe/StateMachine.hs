@@ -88,14 +88,14 @@ createWorker ep = do
   liftIO $ maybe (pure ()) killThread (M.lookup (Key ep) wmap)
 
   -- create pcap handle for interface
-  let (IfaceName name) = ifaceName ep
+  let ifn@(IfaceName name) = ifaceName ep
   timeout <- asks (fromIntegral . bufTimeout)
   hnd     <- liftIO $ openLive name 65535 True timeout
   let f = runOps $ frameOps ep
   let
     worker = case trafficDir ep of
-      Input  -> inputWorker name hnd f
-      Output -> outputWorker name hnd f
+      Input  -> inputWorker ifn hnd f
+      Output -> outputWorker ifn hnd f
 
   -- run thread for new worker
   logInfo $ "Spawning worker thread for " ++ name
@@ -125,13 +125,13 @@ runOps (o : os) = runOps os . opToFunc o
 
 -- | Pull packet from interface handle, apply function, and put into channel in
 -- an infinite loop
-inputWorker :: String -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+inputWorker :: IfaceName -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
 inputWorker iface hnd f = forever $ do
   (_, bs) <- liftIO $ nextBS hnd
   if BS.length bs == 0
     then return ()  -- ignore empty frames (probably just a timeout)
     else do
-      logMetric iface (BS.length bs)
+      logPktSize iface (BS.length bs)
       elem <- case decode bs of
         Left err -> do
           logError $ "Failed to parse packet: " ++ err
@@ -143,7 +143,7 @@ inputWorker iface hnd f = forever $ do
 
 -- | Pull packet from channel, apply function, and write to network interface in
 -- an infinite loop
-outputWorker :: String -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
+outputWorker :: IfaceName -> PcapHandle -> (EthFrame -> EthFrame) -> Worker ()
 outputWorker iface hnd f = forever $ do
   chn  <- asks queueOut
   elem <- liftIO $ readChan chn
@@ -152,5 +152,5 @@ outputWorker iface hnd f = forever $ do
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
   liftIO $ sendPacketBS hnd bs
-  logMetric iface (BS.length bs)
+  logPktSize iface (BS.length bs)
 

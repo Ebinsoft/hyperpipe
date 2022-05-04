@@ -11,9 +11,10 @@ import Data.Sequence (Seq(..), ViewR(..), (|>))
 import qualified Data.Sequence as S
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
 
-type IfaceName = String
-type PacketSize = Int
+import Hyperpipe.StateModel
 
+-- | Data structure keeping track of recent network usage info for
+-- many interfaces.
 type UsageMonitor = Map IfaceName (Seq (UTCTime, Int))
 
 -- | Remove all data points from over 1s ago.
