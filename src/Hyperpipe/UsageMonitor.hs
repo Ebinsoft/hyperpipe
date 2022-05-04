@@ -7,7 +7,7 @@ module Hyperpipe.UsageMonitor where
 
 import Data.Map (Map(..))
 import qualified Data.Map as M
-import Data.Sequence (Seq(..), ViewR(..), (|>))
+import Data.Sequence (Seq(..), (|>))
 import qualified Data.Sequence as S
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
 
@@ -27,15 +27,13 @@ pruneOldMetrics monitor = do
 -- | Create a data point for a given network interface, using the timestamp and
 -- size of one packet sent/received on that interface.
 addMetric :: UsageMonitor -> IfaceName -> (UTCTime, Int) -> IO UsageMonitor
-addMetric monitor iface pktInfo = do
-  let metrics = M.findWithDefault Empty iface monitor
-  pruneOldMetrics (M.insert iface (insertSorted pktInfo metrics) monitor)
+addMetric mon iface metric = pruneOldMetrics $ M.alter addMetric' iface mon
  where
-  time = fst -- alias for readability in function below
-  insertSorted x ySeq = case S.viewr ySeq of
-    EmptyR -> S.singleton x
-    (ys :> y) ->
-      if (time x) < (time y) then insertSorted x ys |> y else ySeq |> x
+  addMetric' = Just . maybe (S.singleton metric) (insertR metric)
+  -- insert from the right, maintaining ordering
+  insertR x Empty = S.singleton x
+  insertR x (ys :|> y) =
+    if fst x < fst y then insertR x ys |> y else ys |> y |> x
 
 -- | Get the current throughput information for all interfaces as a map from
 -- interface name to a tuple containing the number of packets and total number
