@@ -27,9 +27,9 @@ pruneOldMetrics monitor = do
 -- | Create a data point for a given network interface, using the timestamp and
 -- size of one packet sent/received on that interface.
 addMetric :: UsageMonitor -> IfaceName -> (UTCTime, Int) -> IO UsageMonitor
-addMetric monitor iface (ts, size) = do
+addMetric monitor iface (time, size) = do
   let metrics = M.findWithDefault Empty iface monitor
-  pruneOldMetrics (M.insert iface (insertSorted (ts, size) metrics) monitor)
+  pruneOldMetrics (M.insert iface (insertSorted (time, size) metrics) monitor)
  where
   insertSorted (newTime, newSize) elems = case S.viewr elems of
     EmptyR                       -> elems |> (newTime, newSize)
@@ -40,7 +40,8 @@ addMetric monitor iface (ts, size) = do
 -- | Get the current throughput information for all interfaces as a map from
 -- interface name to a tuple containing the number of packets and total number
 -- of bytes to pass through that interface within the last second.
-getThroughput :: UsageMonitor -> IO (Map IfaceName (Int, Int))
-getThroughput tt = do
-  tt' <- pruneOldMetrics tt
-  return $ (\ms -> (length ms, sum (snd <$> ms))) <$> tt'
+getThroughput :: UsageMonitor -> IO (Map String (Int, Int))
+getThroughput monitor = unwrapKeys . calcThroughput <$> pruneOldMetrics monitor
+  where
+    calcThroughput = fmap (\ms -> (length ms, sum (snd <$> ms)))
+    unwrapKeys = M.mapKeys (\(IfaceName n) -> n)
