@@ -37,8 +37,8 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Text.Printf (PrintfArg(..), printf)
 
-import Hyperpipe.UsageMonitor
 import Hyperpipe.StateModel
+import Hyperpipe.UsageMonitor
 
 -- | Type representing the connection to a logging worker thread, with which log
 -- messages can be written.
@@ -63,7 +63,7 @@ instance PrintfArg LogLevel where
   formatArg ERROR = formatArg "\x1b[31mERROR\x1b[0m"
 
 -- | Kinds of information that can be passed through the logging channel.
-data LogItem = LogMsg UTCTime LogLevel String  -- ^ A message string with associated urgency level
+data LogItem = LogMsg UTCTime LogLevel String
              | LogMetric UTCTime IfaceName Int
 
 -- | mtl-style typeclass which gives a monad the ability to send log messages.
@@ -82,8 +82,8 @@ makeLogger lvl = do
   forkIO $ runLogWorker outChn tputVar
   return $ Logger inChn lvl tputVar
 
--- | Reads a message from the queue, formats it, and prints to stdout in an
--- infinite loop.
+-- | Reads from the logging queue, formats and prints messages to
+-- stdout, and records packet metrics to the given `UsageMonitor`.
 runLogWorker :: OutChan LogItem -> MVar UsageMonitor -> IO ()
 runLogWorker chn monVar = loop
  where
