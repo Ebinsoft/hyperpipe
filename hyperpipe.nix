@@ -1,6 +1,7 @@
-{ mkDerivation, base, brick, bytestring, cereal, containers, hpack
-, HsYAML, lib, mtl, optparse-applicative, pcap, string-interpolate
-, tasty, tasty-hunit, tasty-quickcheck, text, time, unagi-chan
+{ mkDerivation, base, brick, bytestring, cereal, containers, dbus
+, hpack, HsYAML, lib, mtl, optparse-applicative, pcap
+, string-interpolate, tasty, tasty-hunit, tasty-quickcheck, text
+, time, unagi-chan
 }:
 mkDerivation {
   pname = "hyperpipe";
@@ -9,16 +10,16 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base bytestring cereal containers HsYAML mtl pcap text time
+    base bytestring cereal containers dbus HsYAML mtl pcap text time
     unagi-chan
   ];
   libraryToolDepends = [ hpack ];
   executableHaskellDepends = [
-    base brick bytestring cereal containers HsYAML mtl
+    base brick bytestring cereal containers dbus HsYAML mtl
     optparse-applicative pcap text time unagi-chan
   ];
   testHaskellDepends = [
-    base bytestring cereal containers HsYAML mtl pcap
+    base bytestring cereal containers dbus HsYAML mtl pcap
     string-interpolate tasty tasty-hunit tasty-quickcheck text time
     unagi-chan
   ];

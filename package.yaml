@@ -12,6 +12,7 @@ dependencies:
 - pcap
 - unagi-chan
 - time
+- dbus
 
 library:
   source-dirs: src

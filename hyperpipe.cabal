@@ -29,6 +29,7 @@ library
     , bytestring
     , cereal
     , containers
+    , dbus
     , mtl
     , pcap
     , text
@@ -49,6 +50,7 @@ executable hyperpipe-daemon
     , bytestring
     , cereal
     , containers
+    , dbus
     , hyperpipe
     , mtl
     , optparse-applicative
@@ -72,6 +74,7 @@ executable hypertop
     , bytestring
     , cereal
     , containers
+    , dbus
     , mtl
     , pcap
     , text
@@ -96,6 +99,7 @@ test-suite hyperpipe-test
     , bytestring
     , cereal
     , containers
+    , dbus
     , hyperpipe
     , mtl
     , pcap
