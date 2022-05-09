@@ -1,7 +1,9 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Control.Applicative (optional)
 import Control.Concurrent.Chan.Unagi.Bounded (newChan)
+import Control.Exception (SomeException, try)
 import Control.Monad (when)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.State.Strict (evalStateT)
@@ -141,6 +143,19 @@ main = do
           setNumCapabilities n
         Nothing -> setNumCapabilities $ min ncores (1 + numEndpoints model)
 
+      -- D-Bus setup
+      dbusResult <- try (initDBusInterface model logHandle)
+      case dbusResult of
+        Left (ex :: SomeException) -> do
+          withLogger logHandle $ logError (show ex)
+          withLogger logHandle
+            $ logError
+                "D-Bus initialization failed. Critical behavior is unaffected, \
+                \but throughput data cannot be inspected with hypertop."
+        Right () ->
+          withLogger logHandle $ logInfo "D-Bus interface initialized."
+
+      -- execute main application
       let
         env = Env
           { bufTimeout = optTimeout opts
