@@ -53,7 +53,7 @@ initDBusInterface model logger = do
 
   reqResult <- requestName client busName []
   when (reqResult /= NamePrimaryOwner) $ do
-    error
+    errorWithoutStackTrace
       "D-Bus name conflict (is another instance of hyperpipe already running?)"
 
   export
