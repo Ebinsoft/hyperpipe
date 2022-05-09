@@ -65,14 +65,7 @@ runWithModel :: StateModel -> StateMachine ()
 runWithModel model = do
   let instructions = stepsBetween (StateModel []) model
   mapM_ interpret instructions -- spins off worker threads
-
-  -- print throughput every second in a loop
-  forever $ do
-    monitor <- asks (monitorVar . logger)
-    stuff   <- liftIO $ readMVar monitor >>= getThroughput
-    liftIO $ print stuff
-    liftIO $ threadDelay 1000000
-
+  forever $ liftIO (threadDelay 10000000)
 
 -- | Execute an `Instruction` as an effect in our `StateMachine`
 interpret :: Instruction -> StateMachine ()
