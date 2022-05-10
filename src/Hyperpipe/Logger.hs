@@ -32,6 +32,7 @@ import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
+import Data.List (isSuffixOf)
 import qualified Data.Map as M
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
@@ -92,7 +93,8 @@ runLogWorker chn monVar = loop
     case item of
       LogMsg time lvl msg -> do
         let timeS = formatTime defaultTimeLocale "%F %X" time
-        let log   = printf "[%s] %s | %s" timeS lvl msg
+        let msg' = rewriteMsg msg
+        let log   = printf "[%s] %s | %s" timeS lvl msg'
         putStrLn log
 
       LogMetric time iface size -> do
@@ -100,6 +102,16 @@ runLogWorker chn monVar = loop
         monitor' <- addMetric monitor iface (time, size)
         putMVar monVar monitor'
     loop
+
+-- | Replace certain non-descriptive error messages with better ones
+-- that explain what went wrong.
+rewriteMsg :: String -> String
+rewriteMsg msg
+  | "(send: Message too long)" `isSuffixOf` msg
+  = "Failed to send frame because its size exceeded the device's MTU.  Ensure \
+    \that all forms of segmentation offloading (TCO,GSO,UFO) are disabled."
+  | otherwise
+  = msg
 
 -- | Helper function for logging messages outside of a `HasLogger` monad.
 withLogger :: Logger -> ReaderT Logger m () -> m ()

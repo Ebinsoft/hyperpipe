@@ -18,6 +18,7 @@ import Control.Concurrent (ThreadId, forkIO, killThread, threadDelay)
 import Control.Concurrent.Chan.Unagi.Bounded
   (InChan, OutChan, readChan, writeChan)
 import Control.Concurrent.MVar (readMVar)
+import Control.Exception (catch)
 import Control.Monad (forever, when)
 import Control.Monad.Reader (ReaderT, ask, asks, lift, runReaderT)
 import Control.Monad.State.Strict (StateT(..), get, liftIO, put)
@@ -144,6 +145,11 @@ outputWorker iface hnd f = forever $ do
     bs = case elem of
       Left  bs' -> bs'
       Right ef  -> encode (f ef)
-  liftIO $ sendPacketBS hnd bs
+  logHnd <- asks logger -- pull logger out in case we need to log an exception
+  liftIO $ catch (sendPacketBS hnd bs) (handleErr logHnd)
   logPktSize iface (BS.length bs)
+ where
+  handleErr :: Logger -> IOError -> IO ()
+  handleErr logHnd err = withLogger logHnd $ logError (show err)
+
 
