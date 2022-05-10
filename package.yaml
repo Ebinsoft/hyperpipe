@@ -12,14 +12,15 @@ dependencies:
 - pcap
 - unagi-chan
 - time
+- dbus
 
 library:
   source-dirs: src
 
 executables:
-  hyperpipe:
+  hyperpipe-daemon:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         hyperpipe-daemon
     ghc-options:
     - -O2
     - -threaded
@@ -29,6 +30,19 @@ executables:
     dependencies:
     - hyperpipe
     - optparse-applicative
+
+  hypertop:
+    main:		Main.hs
+    source-dirs:	hypertop
+    ghc-options:
+    - -O2
+    - -threaded
+    - -rtsopts
+    - -fprof-auto
+    - -with-rtsopts=-N1
+    dependencies:
+    - brick
+    - vty
 
 tests:
   hyperpipe-test:
