@@ -64,6 +64,7 @@ executable hyperpipe-daemon
 executable hypertop
   main-is: Main.hs
   other-modules:
+      DBusClient
       Types
       UI
       Paths_hyperpipe
