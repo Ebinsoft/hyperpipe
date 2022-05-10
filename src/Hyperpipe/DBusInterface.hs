@@ -39,7 +39,6 @@ onInterfaces (StateModel eps) = return (convert <$> eps)
 onThroughput :: Logger -> IO (Map String (Int32, Int32))
 onThroughput Logger {..} = do
   tpMap <- readMVar monitorVar >>= getThroughput
-  print tpMap
   return $ bimap fromIntegral fromIntegral <$> tpMap
 
 -- | Creates and exports a D-Bus interface with methods for querying
