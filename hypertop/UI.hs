@@ -63,10 +63,22 @@ styleMap =
 
 -- | Creates the input and output tables of interfaces from the `State`
 ui :: State -> Widget ()
-ui st = vBox
-  [ B.borderWithLabel (str "Inputs") $ vLimitPercent 50 $ makeTable Input st
+ui st = vBox $ C.hCenter <$>
+  [ epicTitle
+  , B.borderWithLabel (str "Inputs") $ vLimitPercent 50 $ makeTable Input st
   , B.borderWithLabel (str "Outputs") $ vLimitPercent 50 $ makeTable Output st
+  , str "Press Q or Esc to exit."
   ]
+
+epicTitle :: Widget ()
+epicTitle = 
+  str
+    "     __                          __            \n \
+    \   / /_  __  ______  ___  _____/ /_____  ____ \n \
+    \  / __ \\/ / / / __ \\/ _ \\/ ___/ __/ __ \\/ __ \\\n \
+    \ / / / / /_/ / /_/ /  __/ /  / /_/ /_/ / /_/ /\n \
+    \/_/ /_/\\__, / .___/\\___/_/   \\__/\\____/ .___/ \n \
+    \      /____/_/                       /_/      "
 
 -- | Creates an info table for interfaces of a specific `Direction` contained
 -- within the `State`.
