@@ -1,6 +1,9 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+-- | Module: UI
+--
+-- Defines the structure and behavior of the Brick-driven TUI for hypertop.
 module UI where
 
 import Brick
@@ -58,12 +61,15 @@ styleMap :: A.AttrMap
 styleMap =
   A.attrMap V.defAttr [(headerAttr, V.black `on` V.white `V.withStyle` V.bold)]
 
+-- | Creates the input and output tables of interfaces from the `State`
 ui :: State -> Widget ()
 ui st = vBox
   [ B.borderWithLabel (str "Inputs") $ vLimitPercent 50 $ makeTable Input st
   , B.borderWithLabel (str "Outputs") $ vLimitPercent 50 $ makeTable Output st
   ]
 
+-- | Creates an info table for interfaces of a specific `Direction` contained
+-- within the `State`.
 makeTable :: Direction -> State -> Widget ()
 makeTable d st = do
   renderTable
@@ -73,6 +79,7 @@ makeTable d st = do
     $ table (tableHeader : (toRow <$> inputs))
   where inputs = filter (\(_, info) -> ifaceDir info == d) (M.toList st)
 
+-- | Fixed header of info table
 tableHeader :: [Widget ()]
 tableHeader =
   withAttr headerAttr
@@ -82,6 +89,7 @@ tableHeader =
         , padRight (Pad 13) $ str "PACKETS"
         ]
 
+-- | Converts an interface name and `IfaceInfo` pair into a row of a Brick table
 toRow :: (String, IfaceInfo) -> [Widget ()]
 toRow (name, IfaceInfo {..}) =
   [nameCol name, vlanCol vlanSetting] ++ throughput
@@ -94,6 +102,11 @@ toRow (name, IfaceInfo {..}) =
   pktsCol  = str . (++ "pps") . show
   bytesCol = str . (++ "ps") . humanReadableBytes
 
+-- | Renders a quantity of bytes as a string using the largest unit applicable.
+-- 
+-- __Example__
+-- >>> humanReadableBytes 2345
+-- "2.3KiB"
 humanReadableBytes :: Int -> String
 humanReadableBytes n = case find ((< 1024) . fst) pairs of
   Just (val :: Double, fmt) -> printf fmt val
