@@ -11,19 +11,10 @@ import qualified Data.Map as M
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 import Data.Time.Clock (UTCTime, getCurrentTime)
+import Brick (defaultMain)
 
-type Packets = Int
-type Bytes = Int
-
-data IfaceInfo = IfaceInfo
-  { vlanSetting  :: String
-  , ifaceDir     :: String
-  , usageHistory :: Seq (UTCTime, Packets, Bytes)
-  }
-  deriving Show
-
-type State = Map String IfaceInfo
-
+import Types
+import UI
 
 parseIfacesResponse :: Variant -> State
 parseIfacesResponse var =
@@ -32,8 +23,10 @@ parseIfacesResponse var =
     Nothing     -> error "Malformed dbus message body (interfaces)"
  where
   addIface st (name, dir, vlan) =
-    let info = IfaceInfo vlan dir S.empty in M.insert name info st
-
+    let info = IfaceInfo vlan (parseDir dir) S.empty in M.insert name info st
+  parseDir "Input" = Input
+  parseDir "Output" = Output
+  parseDir _ = error "Malformed dbus message body (interfaces - direction)"
 
 parseThroughputResponse :: Variant -> Map String (Packets, Bytes)
 parseThroughputResponse var =
@@ -72,7 +65,8 @@ main = do
   let update = parseThroughputResponse (head $ methodReturnBody tpReply)
 
   time <- getCurrentTime
-  print $ updateState state time update
+  let state' = updateState state time update
 
-  
+  defaultMain app state'
+  return ()
 
