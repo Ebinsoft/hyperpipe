@@ -64,6 +64,8 @@ executable hyperpipe-daemon
 executable hypertop
   main-is: Main.hs
   other-modules:
+      Types
+      UI
       Paths_hyperpipe
   hs-source-dirs:
       hypertop
@@ -81,6 +83,7 @@ executable hypertop
     , text
     , time
     , unagi-chan
+    , vty
   default-language: Haskell2010
 
 test-suite hyperpipe-test
