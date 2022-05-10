@@ -20,6 +20,7 @@ data IfaceInfo = IfaceInfo
 
 type State = Map String IfaceInfo
 
--- * Brick types
-data Event = UpdateStuff (Map String (Packets, Bytes))
+type ThroughputInfo = Map String (Packets, Bytes)
 
+-- * Brick types
+data Event = UpdateInfo UTCTime ThroughputInfo

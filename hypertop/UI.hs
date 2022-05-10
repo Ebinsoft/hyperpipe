@@ -6,7 +6,12 @@ module UI where
 import Brick
   ( (<=>)
   , App(..)
+  , BrickEvent(..)
+  , EventM
+  , Next
   , Widget
+  , continue
+  , halt
   , neverShowCursor
   , resizeOrQuit
   , str
@@ -27,17 +32,24 @@ import qualified Graphics.Vty as V
 import Graphics.Vty.Attributes (Attr(..))
 import Text.Printf (printf)
 
+import DBusClient
 import Types
 
-
-app :: App State e ()
+app :: App State Event ()
 app = App
   { appDraw         = pure . ui
   , appChooseCursor = neverShowCursor
-  , appHandleEvent  = resizeOrQuit
+  , appHandleEvent  = handleEvent
   , appStartEvent   = return
   , appAttrMap      = const styleMap
   }
+
+handleEvent :: State -> BrickEvent () Event -> EventM () (Next State)
+handleEvent s (AppEvent (UpdateInfo time infoMap)) =
+  continue (updateState s time infoMap)
+handleEvent s (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt s
+handleEvent s (VtyEvent (V.EvKey V.KEsc [])) = halt s
+handleEvent s _ = continue s
 
 headerAttr :: A.AttrName
 headerAttr = "header"
