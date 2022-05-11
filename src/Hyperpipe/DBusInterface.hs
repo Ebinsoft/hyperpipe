@@ -48,7 +48,7 @@ onThroughput Logger {..} = do
 -- generic error if it cannot acquire its bus name.
 initDBusInterface :: StateModel -> Logger -> IO ()
 initDBusInterface model logger = do
-  client    <- connectSession
+  client    <- connectSystem
 
   reqResult <- requestName client busName []
   when (reqResult /= NamePrimaryOwner) $ do

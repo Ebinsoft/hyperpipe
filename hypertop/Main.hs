@@ -17,7 +17,7 @@ import UI
 main :: IO ()
 main = do
   -- create D-Bus session and get initial state
-  client      <- connectSession
+  client      <- connectSystem
   ifacesReply <- call_
     client
     (methodCall "/com/hyperpipe/metrics" "com.hyperpipe.metrics" "interfaces")
