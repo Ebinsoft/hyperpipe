@@ -63,15 +63,21 @@ styleMap =
 
 -- | Creates the input and output tables of interfaces from the `State`
 ui :: State -> Widget ()
-ui st = vBox $ C.hCenter <$>
-  [ epicTitle
-  , B.borderWithLabel (str "Inputs") $ vLimitPercent 50 $ makeTable Input st
-  , B.borderWithLabel (str "Outputs") $ vLimitPercent 50 $ makeTable Output st
-  , str "Press Q or Esc to exit."
-  ]
+ui st =
+  vBox
+    $   C.hCenter
+    <$> [ epicTitle
+        , B.borderWithLabel (str "Inputs") $ vLimitPercent 50 $ makeTable
+          Input
+          st
+        , B.borderWithLabel (str "Outputs") $ vLimitPercent 50 $ makeTable
+          Output
+          st
+        , str "Press Q or Esc to exit."
+        ]
 
 epicTitle :: Widget ()
-epicTitle = 
+epicTitle =
   str
     "     __                          __            \n \
     \   / /_  __  ______  ___  _____/ /_____  ____ \n \
@@ -111,18 +117,20 @@ toRow (name, IfaceInfo {..}) =
     _ :|> (_, pkts, bytes) -> [bytesCol bytes, pktsCol pkts]
   nameCol  = str
   vlanCol  = str . (\s -> if null s then " " else s)
-  pktsCol  = str . (++ "pps") . show
-  bytesCol = str . (++ "ps") . humanReadableBytes
+  pktsCol  = str . (++ " pps") . show
+  bytesCol = str . (++ "ps") . bytesToBitrate
 
--- | Renders a quantity of bytes as a string using the largest unit applicable.
+-- | Takes a quantitiy of bytes and renders the equivalent number of bits as a
+-- string using the largest unit applicable.
 -- 
 -- __Example__
--- >>> humanReadableBytes 2345
--- "2.3KiB"
-humanReadableBytes :: Int -> String
-humanReadableBytes n = case find ((< 1024) . fst) pairs of
+-- >>> bytesToBitrate 2345
+-- "18.3 Kb"
+bytesToBitrate :: Int -> String
+bytesToBitrate bytes = case find ((< 1000) . fst) pairs of
   Just (val :: Double, fmt) -> printf fmt val
-  Nothing                   -> printf "%.0fGiB" (n `div` (1024 ^ 7))
+  Nothing                   -> printf "%.0f Gb" (bits `div` (1000 ^ 7))
  where
-  pairs = zip (iterate (/ 1024) (fromIntegral n)) fmts
-  fmts  = ["%.0fB", "%.1fKiB", "%.1fMiB", "%.1fGiB"]
+  bits  = bytes * 8
+  pairs = zip (iterate (/ 1024) (fromIntegral bits)) fmts
+  fmts  = ["%.0f b", "%.1f Kb", "%.1f Mb", "%.1f Gb"]
