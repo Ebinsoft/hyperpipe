@@ -40,8 +40,8 @@ This will install two executables that are described in the sections below:
 #### D-Bus
 Hyperpipe uses the D-Bus system bus to share diagnostic information during
 runtime, but probably won't have permission to use it by default. You'll need to
-add a policy for Hyperpipe by copying the (config
-file)[scripts/assets/hyperpipe.conf] from this repo into the appropriate dbus
+add a policy for Hyperpipe by copying the [config file](scripts/assets/hyperpipe.conf)
+from this repo into the appropriate dbus
 folder:
 ```bash
 sudo cp scripts/assets/hyperpipe.conf /etc/dbus-1/system.d/
