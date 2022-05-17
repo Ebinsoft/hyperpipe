@@ -5,7 +5,7 @@
 }:
 mkDerivation {
   pname = "hyperpipe";
-  version = "0.0.0";
+  version = "1.0";
   src = ./.;
   isLibrary = true;
   isExecutable = true;
